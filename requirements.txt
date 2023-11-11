@@ -1,0 +1,15 @@
+pyrogram
+toml
+typer
+loguru
+rich
+peewee
+appdirs
+pyrubrum-continued==0.2.22
+uvloop
+python-box
+thefuzz[speedup]
+python-dateutil
+emoji
+tgcrypto
+aenum

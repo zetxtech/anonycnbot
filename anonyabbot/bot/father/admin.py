@@ -123,9 +123,9 @@ class Admin:
         items = []
         g: Group
         for i, g in enumerate(groups.iterator()):
-            name = f'[{truncate_str(g.title, 20)}](t.me/{g.username})'
+            name = f"[{truncate_str(g.title, 20)}](t.me/{g.username})"
             if g.disabled:
-                name = f'~~{name}~~'
+                name = f"~~{name}~~"
             item = f"{i+1} | {name}"
             items.append((item, str(i + 1), g.id))
         if not items:
@@ -143,9 +143,9 @@ class Admin:
     ):
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "activity":
-            return '🔽 Sort Activity' if desc else '🔼 Sort Activity'
+            return "🔽 Sort Activity" if desc else "🔼 Sort Activity"
         else:
-            return '↔ Sort Activity'
+            return "↔ Sort Activity"
 
     @operation(UserRole.ADMIN)
     async def on_lga_switch_activity(
@@ -174,9 +174,9 @@ class Admin:
     ):
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "members":
-            return '🔽 Sort Member Count' if desc else '🔼 Sort Member Count'
+            return "🔽 Sort Member Count" if desc else "🔼 Sort Member Count"
         else:
-            return '↔ Sort Member Count'
+            return "↔ Sort Member Count"
 
     @operation(UserRole.ADMIN)
     async def on_lga_switch_member(

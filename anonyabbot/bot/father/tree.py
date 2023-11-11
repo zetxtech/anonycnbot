@@ -23,7 +23,7 @@ class Tree:
                     extras="new_group",
                 ): {M("jump_group_detail")},
             },
-            M("_group_detail", back='list_group'): {
+            M("_group_detail", back="list_group"): {
                 M("edit_group_profile", "⚒️ Group Profile", "ℹ️ Group avatar and description can only be edited in @botfather"): {
                     L("botfather_group", "Go to @botfather", url="t.me/botfather")
                 },

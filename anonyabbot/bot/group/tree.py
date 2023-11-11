@@ -22,7 +22,13 @@ class Tree:
                 M("edit_group_profile", "⚒️ Group Profile", "ℹ️ Group avatar and description can only be edited in @botfather"): {
                     L("botfather_group", "Go to @botfather", url="t.me/botfather")
                 },
-                P("edit_default_ban_group", "👑 Default Permissions", '👤 Default permission for all members:\n', extras="_edbg_done", per_page=8): {M("edbg_select")},
+                P(
+                    "edit_default_ban_group",
+                    "👑 Default Permissions",
+                    "👤 Default permission for all members:\n",
+                    extras="_edbg_done",
+                    per_page=8,
+                ): {M("edbg_select")},
                 M("edit_welcome_message", "⭐ Welcome Message"): {
                     M("edit_welcome_message_message", "🧾 Edit Message"),
                     M("edit_welcome_message_button", "⌨️ Edit Buttons"),
@@ -34,7 +40,7 @@ class Tree:
             M("_edbg_done"): None,
             M("_lgm_switch_activity"): None,
             M("_lgm_switch_role"): None,
-            M("_member_detail", back='list_group_members'): {
+            M("_member_detail", back="list_group_members"): {
                 K("edit_member_role_select", "👑 Edit Role", "👑 Select Roles"): {M("edit_member_role")},
                 P("edit_member_ban_group", "⚠️ Edit Permission", extras="_edit_member_ban_group_select_time"): {M("embg_select")},
                 M("kick_member_confirm", "🚫 Kick Member"): {M("kick_member", "⚠️ Yes, I am sure.")},

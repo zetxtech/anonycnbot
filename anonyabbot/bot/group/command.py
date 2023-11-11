@@ -9,6 +9,7 @@ from ...utils import async_partial
 from .common import operation
 from .worker import DeleteOperation, PinOperation, UnpinOperation
 
+
 class OnCommand:
     def get_member_reply_message(self: "anonyabbot.GroupBot", message: TM):
         member: Member = message.from_user.get_member(self.group)
@@ -22,7 +23,7 @@ class OnCommand:
                 raise OperationError("message outdated")
             mr: Message = rmr.message
         return member, mr
-    
+
     @operation(MemberRole.MEMBER)
     async def on_delete(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
@@ -44,7 +45,7 @@ class OnCommand:
             await msg.edit(f"🗑️ Message deleted ({op.requests-op.errors}/{op.requests}).")
         await asyncio.sleep(2)
         await msg.delete()
-        
+
     @operation(MemberRole.MEMBER)
     async def on_change(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
@@ -52,23 +53,23 @@ class OnCommand:
         member: Member = message.from_user.get_member(self.group)
         _, mask = await self.unique_mask_pool.get_mask(member, renew=True)
         await info(f"🌈 Your mask has been changed to: {mask}")
-        
+
     @operation(MemberRole.MEMBER)
     async def on_setmask(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        msg: TM = await info('⬇️ Please enter an emoji as your mask:', time=None)
-        self.set_conversation(message, 'sm_mask', data=msg)
+        msg: TM = await info("⬇️ Please enter an emoji as your mask:", time=None)
+        self.set_conversation(message, "sm_mask", data=msg)
         await asyncio.sleep(120)
         if await msg.delete():
             self.set_conversation(message, None)
-            await info('⚠️ Timeout.', 2)
-    
+            await info("⚠️ Timeout.", 2)
+
     @operation(MemberRole.ADMIN_BAN)
     async def on_ban(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        
+
         cmd = message.text.split(None, 1)
         try:
             _, uid = cmd
@@ -79,7 +80,7 @@ class OnCommand:
             user = await self.bot.get_users(uid)
             target = user.get_member(self.group)
             if not target:
-                raise OperationError('member not found in this group')
+                raise OperationError("member not found in this group")
             member: Member = message.from_user.get_member(self.group)
         if target.role >= MemberRole.ADMIN:
             member.validate(MemberRole.ADMIN_ADMIN, fail=True)
@@ -91,16 +92,16 @@ class OnCommand:
             return await info("⚠️ Permission denied.")
         if target.role == MemberRole.BANNED:
             return await info("⚠️ The user is already banned.")
-        
+
         target.role = MemberRole.BANNED
         target.save()
         return await info("🚫 Member banned.")
-    
+
     @operation(MemberRole.ADMIN_BAN)
     async def on_unban(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        
+
         cmd = message.text.split(None, 1)
         try:
             _, uid = cmd
@@ -111,7 +112,7 @@ class OnCommand:
             user = await self.bot.get_users(uid)
             target = user.get_member(self.group)
             if not target:
-                raise OperationError('member not found in this group')
+                raise OperationError("member not found in this group")
             member: Member = message.from_user.get_member(self.group)
         if target.role >= MemberRole.ADMIN:
             member.validate(MemberRole.ADMIN_ADMIN, fail=True)
@@ -123,11 +124,11 @@ class OnCommand:
             return await info("⚠️ Permission denied.")
         if not target.role == MemberRole.BANNED:
             return await info("⚠️ The user is not banned.")
-        
+
         target.role = MemberRole.GUEST
         target.save()
         return await info("✅ Member unbanned.")
-    
+
     @operation(MemberRole.ADMIN_MSG)
     async def on_pin(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
@@ -145,7 +146,7 @@ class OnCommand:
             await msg.edit(f"📌 Message pinned ({op.requests-op.errors}/{op.requests}).")
         await asyncio.sleep(2)
         await msg.delete()
-        
+
     @operation(MemberRole.ADMIN_MSG)
     async def on_unpin(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
@@ -163,7 +164,7 @@ class OnCommand:
             await msg.edit(f"📌 Message unpinned ({op.requests-op.errors}/{op.requests}).")
         await asyncio.sleep(2)
         await msg.delete()
-        
+
     @operation(MemberRole.ADMIN_BAN)
     async def on_reveal(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
@@ -171,22 +172,21 @@ class OnCommand:
         _, mr = self.get_member_reply_message(message)
         target: Member = mr.member
         msg = (
-            f'ℹ️ Profile of this member:\n\n'
-            f'Name: {target.user.name}\n'
+            f"ℹ️ Profile of this member:\n\n"
+            f"Name: {target.user.name}\n"
             f"ID: {target.user.uid}\n"
             f"Role in group: {target.role.display.title()}\n"
             f"Joining date: {target.created.strftime('%Y-%m-%d')}\n"
             f"Message count: {target.n_messages}\n"
             f"Last Activity: {target.last_activity.strftime('%Y-%m-%d')}\n"
             f"Last Mask: {target.last_mask}\n\n"
-            f'👁️‍🗨️ This panel is only visible to you.'
+            f"👁️‍🗨️ This panel is only visible to you."
         )
         await info(msg, time=15)
-    
+
     @operation(MemberRole.ADMIN_BAN)
     async def on_manage(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         _, mr = self.get_member_reply_message(message)
         target: Member = mr.member
-        return await self.to_menu_scratch('_member_detail', message.chat.id, message.from_user.id, member_id=target.id)
-    
+        return await self.to_menu_scratch("_member_detail", message.chat.id, message.from_user.id, member_id=target.id)

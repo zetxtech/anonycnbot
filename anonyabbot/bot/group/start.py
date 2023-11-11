@@ -9,13 +9,7 @@ from .common import operation
 
 
 class Start:
-    async def send_welcome_msg(
-        self: "anonyabbot.GroupBot",
-        user: User,
-        msg: str = None,
-        button_spec: str = None,
-        photo: str = None
-    ):
+    async def send_welcome_msg(self: "anonyabbot.GroupBot", user: User, msg: str = None, button_spec: str = None, photo: str = None):
         if msg:
             msg = msg.format(
                 first_name=user.firstname,
@@ -105,8 +99,8 @@ class Start:
     ):
         member: Member = context.from_user.get_member(self.group)
         if member.role == MemberRole.CREATOR:
-            await context.answer('⚠️ Creator of the group can not leave.')
-            await self.to_menu('start', context)
+            await context.answer("⚠️ Creator of the group can not leave.")
+            await self.to_menu("start", context)
             return
         return f"⚠️ Are you sure to leave the group?\n⚠️ Your current role is: {member.role.display}."
 

@@ -151,7 +151,7 @@ class MenuBot(Bot):
         if button is None:
             func = getattr(self, f"button_{id.lstrip('_')}", None)
             if not func:
-                button = '✅ OK'
+                button = "✅ OK"
             else:
                 button = func
         if display is None:

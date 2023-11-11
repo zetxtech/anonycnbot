@@ -51,7 +51,7 @@ class OnMessage:
             try:
                 if conv.status == "ewmm_message":
                     if message.text:
-                        if message.text == 'default':
+                        if message.text == "default":
                             content = None
                         else:
                             content = message.text
@@ -59,7 +59,7 @@ class OnMessage:
                         self.group.save()
                         await info(f"✅ Succeed.")
                     elif message.photo:
-                        if message.caption == 'default':
+                        if message.caption == "default":
                             content = None
                         else:
                             content = message.caption
@@ -74,7 +74,7 @@ class OnMessage:
                     if not content:
                         await info(f"⚠️ Not a valid message.")
                     else:
-                        if content == 'default':
+                        if content == "default":
                             content = None
                         user: User = message.from_user.get_record()
                         try:
@@ -84,7 +84,9 @@ class OnMessage:
                                 button_spec=content,
                                 photo=self.group.welcome_message_photo,
                             )
-                            await self.to_menu_scratch("_ewmb_ok_confirm", message.chat.id, message.from_user.id, button_spec=message.text, text_message=tm.id)
+                            await self.to_menu_scratch(
+                                "_ewmb_ok_confirm", message.chat.id, message.from_user.id, button_spec=message.text, text_message=tm.id
+                            )
                         except ValueError:
                             await info(f"⚠️ Format error.")
                 elif conv.status == "eci_instruction":
@@ -133,7 +135,7 @@ class OnMessage:
         try:
             member: Member = message.from_user.get_member(self.group)
             if not member:
-                raise OperationError('you are not in this group, try `/start` to join.')
+                raise OperationError("you are not in this group, try `/start` to join.")
             member.validate(MemberRole.LEFT, fail=True, reversed=True)
             member.cannot(BanType.MESSAGE, fail=True)
             if message.media:
@@ -204,7 +206,7 @@ class OnMessage:
                     rmm: Message = rmr.message
         else:
             rmm = None
-            
+
         m = Message.create(group=self.group, mid=message.id, member=member, mask=mask)
         member.last_mask = mask
         member.save()

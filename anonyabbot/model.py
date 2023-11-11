@@ -88,7 +88,6 @@ class BanType(IntEnum):
     LONG_MASK_1 = 40, "pin a mask longer than 1 emojis"
     LONG_MASK_2 = 41, "pin a mask longer than 2 emojis"
     LONG_MASK_3 = 42, "pin a mask longer than 3 emojis"
-    
 
 
 class EnumField(IntegerField):
@@ -463,6 +462,7 @@ class Member(BaseModel):
                     raise BanError(type=ban, member=False, until=self.group.default_ban_group.until)
                 return True
         return False
+
 
 class Message(BaseModel):
     id = AutoField()

@@ -21,7 +21,7 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
-        context.parameters.pop('edbg_current', None)
+        context.parameters.pop("edbg_current", None)
         return (
             f"👑 Welcome group admin {context.from_user.name}.\n\n"
             "👁️‍🗨️ This panel is only visible to you.\n"
@@ -62,7 +62,7 @@ class Manage:
     ):
         current_selection = parameters.get("edbg_current", None)
         if not current_selection:
-            parameters['edbg_current'] = current_selection = [t.value for t in self.group.default_bans()]
+            parameters["edbg_current"] = current_selection = [t.value for t in self.group.default_bans()]
 
         items = []
         types = [t for t in BanType if not t == BanType.NONE]
@@ -197,11 +197,10 @@ class Manage:
         self.group.welcome_message_buttons = button_spec
         self.group.save()
         await self.bot.delete_messages(self.group.username, test_message_id)
-        m = await self.bot.send_message(context.message.chat.id, '✅ Succeed')
+        m = await self.bot.send_message(context.message.chat.id, "✅ Succeed")
         await asyncio.sleep(5)
         await m.delete()
         await context.message.delete()
-        
 
     @operation(MemberRole.ADMIN_MSG)
     async def on_edit_chat_instruction(
@@ -266,9 +265,9 @@ class Manage:
     ):
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "activity":
-            return '🔽 Sort Activity' if desc else '🔼 Sort Activity'
+            return "🔽 Sort Activity" if desc else "🔼 Sort Activity"
         else:
-            return '↔ Sort Activity'
+            return "↔ Sort Activity"
 
     @operation(MemberRole.ADMIN_BAN)
     async def on_lgm_switch_activity(
@@ -295,9 +294,9 @@ class Manage:
     ):
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "role":
-            return '🔽 Sort Role' if desc else '🔼 Sort Role'
+            return "🔽 Sort Role" if desc else "🔼 Sort Role"
         else:
-            return '↔ Sort Role'
+            return "↔ Sort Role"
 
     @operation(MemberRole.ADMIN_BAN)
     async def on_lgm_switch_role(
@@ -333,7 +332,7 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
-        context.parameters.pop('edbg_current', None)
+        context.parameters.pop("edbg_current", None)
         target: Member = Member.get_by_id(parameters["member_id"])
         return (
             f"👤 Member profile of {target.user.markdown}:\n\n"
@@ -343,7 +342,7 @@ class Manage:
             f"Message count: {target.n_messages}\n"
             f"Last Activity: {target.last_activity.strftime('%Y-%m-%d')}\n"
             f"Last Mask: {target.last_mask}\n\n"
-            f'👁️‍🗨️ This panel is only visible to you.'
+            f"👁️‍🗨️ This panel is only visible to you."
         )
 
     @operation(MemberRole.ADMIN_BAN)
@@ -395,7 +394,7 @@ class Manage:
         parameters: dict,
     ):
         target: Member = Member.get_by_id(parameters["member_id"])
-        return f'👤 Set permission for {target.user.markdown}:\n'
+        return f"👤 Set permission for {target.user.markdown}:\n"
 
     @operation(MemberRole.ADMIN_BAN)
     async def on_edit_member_ban_group(
@@ -473,7 +472,7 @@ class Manage:
         if target.role >= member.role:
             await context.answer("⚠️ Permission Denied.")
             await self.to_menu("_member_detail", context)
-        
+
         current_selection = parameters.get("embg_current", [])
         td_str = parameters["embg_done_id"]
         td = parse_timedelta(td_str)
@@ -538,4 +537,3 @@ class Manage:
     ):
         await context.message.delete()
         await context.answer("✅ Closed.")
-        

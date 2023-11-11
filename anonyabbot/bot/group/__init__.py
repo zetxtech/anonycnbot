@@ -51,7 +51,7 @@ class GroupBot(MenuBot, _Methods):
                     if self.group:
                         self.group.disabled = True
                         self.group.save()
-                        logger.info(f'Group @{self.group.username} disabled because token deactivated.')
+                        logger.info(f"Group @{self.group.username} disabled because token deactivated.")
                 self.boot_exception = e
                 return
             finally:
@@ -104,7 +104,7 @@ class GroupBot(MenuBot, _Methods):
                 )
                 Member.create(group=self.group, user=self.creator, role=MemberRole.CREATOR)
         logger.info(f"Now listening updates in group: @{self.bot.me.username}.")
-        
+
         await self.bot.set_bot_commands(
             [
                 BotCommand("start", "Show info and panel"),
@@ -123,6 +123,6 @@ class GroupBot(MenuBot, _Methods):
     async def touch(self):
         if self.group:
             self.group.username = self.bot.me.username
-            self.group.title=self.bot.me.name
+            self.group.title = self.bot.me.name
             self.group.save()
             self.group.touch()

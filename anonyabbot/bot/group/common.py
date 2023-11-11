@@ -54,7 +54,8 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                     self.group.disabled = True
                     self.group.save()
                 self.failed.set()
-                logger.info(f'Group @{client.me.username} disabled because token deactivated.')
+                logger.info(f"Group @{client.me.username} disabled because token deactivated.")
+
         return wrapper
 
     return deco

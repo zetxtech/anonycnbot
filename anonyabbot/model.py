@@ -43,7 +43,7 @@ class MemberRoleError(OperationError):
 class BanError(OperationError):
     def __init__(self, type: BanType, member=True, until: datetime = None):
         until_spec = f' until `{until.strftime("%Y-%m-%d %H:%M")}`' if until else ""
-        super().__init__(f"{'you' if member else 'everybody'} can not {type.display} in this group{until_spec}")
+        super().__init__(f"{'you can not' if member else 'nobody can'} {type.display} in this group{until_spec}")
 
 
 class UserRole(IntEnum):
@@ -88,6 +88,8 @@ class BanType(IntEnum):
     LONG_MASK_1 = 40, "pin a mask longer than 1 emojis"
     LONG_MASK_2 = 41, "pin a mask longer than 2 emojis"
     LONG_MASK_3 = 42, "pin a mask longer than 3 emojis"
+    PM_USER = 50, "pm other user in the group"
+    PM_ADMIN = 51, "pm admins in the group"
 
 
 class EnumField(IntegerField):
@@ -315,10 +317,7 @@ class BanGroup(BaseModel):
     created = DateTimeField(default=datetime.now)
     until = DateTimeField(default=datetime.now, null=True)
 
-    default_types = [
-        BanType.PIN_MASK,
-        BanType.LONG_MASK_1,
-    ]
+    default_types = []
 
     @classmethod
     def generate(cls, types: List[BanType] = None, until: datetime = None):
@@ -339,7 +338,7 @@ class BanGroupEntry(BaseModel):
 
 class Group(BaseModel):
     id = AutoField()
-    uid = IntegerField(unique=True)
+    uid = IntegerField()
     token = CharField(max_length=50, unique=True)
     username = CharField(index=True)
     title = CharField(index=True, null=True)
@@ -446,7 +445,7 @@ class Member(BaseModel):
             else:
                 return True
 
-    def cannot(self, ban: BanType, fail=False, check_group=True):
+    def check_ban(self, ban: BanType, fail=True, check_group=True):
         if self.validate(MemberRole.ADMIN):
             return False
         if self.ban_group:
@@ -491,17 +490,15 @@ class RedirectedMessage(BaseModel):
 
 class PMBan(BaseModel):
     id = AutoField()
-    from_member = ForeignKeyField(User, null=True)
-    to_member = ForeignKeyField(User, backref="pm_bans")
+    from_member = ForeignKeyField(Member, null=True, backref="pm_bans")
+    to_member = ForeignKeyField(Member, backref="applied_pm_bans")
     created = DateTimeField(default=datetime.now)
-    until = DateTimeField(default=datetime.now)
 
 
 class PMMessage(BaseModel):
     id = AutoField()
-    group = ForeignKeyField(Group, backref="pm_bans")
-    from_user = ForeignKeyField(User, null=True)
-    to_user = ForeignKeyField(User, backref="pm_messages")
-    message = IntegerField(unique=True)
-    redirected_message = IntegerField(unique=True)
+    from_member = ForeignKeyField(Member, null=True, backref="pm_messages")
+    to_member = ForeignKeyField(Member, backref="received_pm_messages")
+    mid = IntegerField(unique=True)
+    redirected_mid = IntegerField(unique=True)
     time = DateTimeField(default=datetime.now)

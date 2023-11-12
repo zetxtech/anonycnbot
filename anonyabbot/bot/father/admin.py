@@ -7,10 +7,9 @@ from peewee import fn
 
 import anonyabbot
 
-from ...utils import to_iterable, truncate_str, batch
+from ...utils import to_iterable, truncate_str
 from ...model import User, UserRole, Group, Member, Message
-from ..pool import stop_group_bot
-from ..group.worker import start_time, waiting_time, waiting_requests
+from ..pool import start_time, worker_status, stop_group_bot
 from .common import operation
 
 
@@ -27,8 +26,8 @@ class Admin:
         date_ago = datetime.now() - timedelta(days=7)
         n_active_groups = Group.select().where(~(Group.disabled), Group.last_activity >= date_ago).count()
         latest_user: User = User.select().order_by(User.created.desc()).get()
-        running_time = ":".join(str(datetime.now() - start_time).split(":")[:2])
-        waiting_delay = f"{waiting_time / waiting_requests:.1f}" if waiting_requests else "inf"
+        running_time = ":".join(str(datetime.now() - start_time).split(":")[:3]).split('.')[0]
+        waiting_delay = f"{worker_status['time'] / worker_status['requests']:.1f}" if worker_status['requests'] else "inf"
         msg = f"ℹ️ System info:\n\n"
         fields = [
             f"Users: {User.select().count()}",
@@ -40,7 +39,7 @@ class Admin:
             f"Groups: {n_groups}",
             f"Active Groups: {n_active_groups}",
             f"Running Time: {running_time}",
-            f"Average Delay: {waiting_delay}",
+            f"Average Delay: {waiting_delay} seconds",
             f"Messages: {Message.select().count()}",
         ]
         msg += indent("\n".join(fields), "  ")

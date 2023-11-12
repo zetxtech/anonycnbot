@@ -42,6 +42,8 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                 except OperationError as e:
                     try:
                         await self.info(f"⚠️ Fail: {e}.", context, alert=True)
+                        if isinstance(context, TM):
+                            await context.delete()
                     except:
                         pass
                 except MessageNotModified:

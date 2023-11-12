@@ -8,11 +8,7 @@ from pyrogram.errors import RPCError, UserIsBlocked
 import anonyabbot
 
 from ...model import MemberRole, Message, Member, BanType, RedirectedMessage
-
-start_time = datetime.now()
-waiting_time = 0
-waiting_requests = 0
-
+from .. import pool
 
 @dataclass(kw_only=True)
 class Operation:
@@ -52,13 +48,22 @@ class UnpinOperation(Operation):
 
 
 class Worker:
+    async def report_status(self: "anonyabbot.GroupBot", time: int, requests: int, errors: int):
+        self.worker_status['time'] += time
+        self.worker_status['requests'] += requests
+        self.worker_status['errors'] += errors
+        async with pool.worker_status_lock:
+            pool.worker_status['time'] += time
+            pool.worker_status['requests'] += requests
+            pool.worker_status['errors'] += errors
+    
     async def worker(self: "anonyabbot.GroupBot"):
         global waiting_time
         global waiting_requests
 
         while True:
+            op = await self.queue.get()
             try:
-                op = await self.queue.get()
                 if not op:
                     break
                 if isinstance(op, BroadcastOperation):
@@ -79,7 +84,7 @@ class Worker:
                             continue
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         rmr = None
@@ -127,7 +132,7 @@ class Worker:
                             continue
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         try:
@@ -151,7 +156,7 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         try:
@@ -178,9 +183,7 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
-                            continue
-
+                        
                         try:
                             if m.id == op.message.member.id:
                                 await self.bot.pin_chat_message(
@@ -209,8 +212,6 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
-                            continue
 
                         try:
                             if m.id == op.message.member.id:
@@ -227,9 +228,10 @@ class Worker:
                         finally:
                             op.requests += 1
 
-                op.finished.set()
-                waiting_time += (datetime.now() - op.created).total_seconds()
-                waiting_requests += op.requests
-
+                
+                waiting_time = (datetime.now() - op.created).total_seconds() 
+                await self.report_status(waiting_time, op.requests, op.errors)
             except Exception as e:
                 self.log.opt(exception=e).warning("Worker error:")
+            finally:
+                op.finished.set()

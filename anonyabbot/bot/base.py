@@ -256,6 +256,7 @@ class MenuBot(Bot):
         id: str,
         button: str = None,
         header: str = None,
+        footer: str = None,
         filter: Filter = None,
         back=None,
         web=False,
@@ -278,6 +279,8 @@ class MenuBot(Bot):
         )
         if header is None:
             header = getattr(self, f"header_{id.lstrip('_')}", None)
+        if footer is None:
+            footer = getattr(self, f"footer_{id.lstrip('_')}", None)
         style = PageStyle(
             **style_params,
             limit=per_line,
@@ -288,7 +291,7 @@ class MenuBot(Bot):
             next_page_text="➡️",
             previous_page_text="⬅️",
         )
-        return ContentPageMenu(**menu_params, header=header, style=style)
+        return ContentPageMenu(**menu_params, header=header, footer=footer, style=style)
 
     def _link(
         self,

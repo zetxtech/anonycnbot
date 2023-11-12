@@ -39,12 +39,14 @@ class Manage:
         group = self.group
         member: Member = context.from_user.get_member(self.group)
         creator = group.creator.markdown if member.role >= MemberRole.ADMIN_BAN else group.creator.masked_name
+        waiting_delay = f"{self.worker_status['time'] / self.worker_status['requests']:.1f}" if self.worker_status['requests'] else "inf"
         msg = f"ℹ️ Group info:\n\n"
         fields = [
             f"Title: [{group.title}](t.me/{group.username})",
             f"Creator: {creator}",
             f"Members: {group.n_members}",
             f"Messages: {group.n_messages}",
+            f"Average Delay: {waiting_delay} seconds",
             f"Disabled: {'**Yes**' if group.disabled else 'No'}",
             f"Created: {group.created.strftime('%Y-%m-%d')}",
             f"Last Activity: {group.last_activity.strftime('%Y-%m-%d')}",
@@ -72,7 +74,7 @@ class Manage:
                 item = f"`   {item}`"
             else:
                 item = f"` ✓ {item}`"
-            items.append(item, str(i + 1), t.value)
+            items.append((item, str(i + 1), t.value))
         return items
 
     @operation(MemberRole.ADMIN_BAN)
@@ -164,7 +166,7 @@ class Manage:
             "  {last_name}  : User last name\n"
             "  {masked_name}: User masked name\n"
             "  {markdown}   : User full name with mention link\n\n"
-            "ℹ️ Type `default` to use default message."
+            "ℹ️ Type `disable` to disable welcome message."
         )
 
     @operation(MemberRole.ADMIN_MSG)
@@ -224,7 +226,7 @@ class Manage:
             "3. If you edited a message, the edition will be broadcasted to all users.\n"
             "4. Have fun chatting!```\n\n"
             "⬇️ Type new chat instruction (only visible to you):\n"
-            "ℹ️ (Type `default` to use default message)"
+            "ℹ️ (Type `disable` to disable chat instruction)"
         )
         return msg
 

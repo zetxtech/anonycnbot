@@ -97,7 +97,8 @@ class Start:
         if not items:
             await self.info("⚠️ No group available.", context=context)
             await self.to_menu("start", context)
-        return items
+        else:
+            return items
 
     @operation()
     async def on_jump_group_detail(

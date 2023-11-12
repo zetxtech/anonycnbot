@@ -100,7 +100,7 @@ class Worker:
                                     reply_to_message_id=rmr.mid if rmr else None,
                                 )
                         except RPCError as e:
-                            if isinstance(e, UserIsBlocked):
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
                                 m.role = MemberRole.LEFT
                                 m.save()
                             op.errors += 1
@@ -135,7 +135,7 @@ class Worker:
                             if masked_message:
                                 await self.bot.edit_message_text(masked_message.to_member.user.uid, masked_message.mid, content)
                         except RPCError as e:
-                            if isinstance(e, UserIsBlocked):
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
                                 m.role = MemberRole.LEFT
                                 m.save()
                             op.errors += 1
@@ -162,7 +162,7 @@ class Worker:
                                 if masked_message:
                                     await self.bot.delete_messages(masked_message.to_member.user.uid, masked_message.mid)
                         except RPCError as e:
-                            if isinstance(e, UserIsBlocked):
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
                                 m.role = MemberRole.LEFT
                                 m.save()
                             op.errors += 1
@@ -193,7 +193,7 @@ class Worker:
                                         masked_message.to_member.user.uid, masked_message.mid, both_sides=True, disable_notification=True
                                     )
                         except RPCError as e:
-                            if isinstance(e, UserIsBlocked):
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
                                 m.role = MemberRole.LEFT
                                 m.save()
                             op.errors += 1
@@ -220,7 +220,7 @@ class Worker:
                                 if masked_message:
                                     await self.bot.unpin_chat_message(masked_message.to_member.user.uid, masked_message.mid)
                         except RPCError as e:
-                            if isinstance(e, UserIsBlocked):
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
                                 m.role = MemberRole.LEFT
                                 m.save()
                             op.errors += 1

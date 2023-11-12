@@ -3,11 +3,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from pyrogram.types import Message as TM
-from pyrogram.errors import RPCError
+from pyrogram.errors import RPCError, UserIsBlocked
 
 import anonyabbot
 
-from ...model import Message, Member, BanType, RedirectedMessage
+from ...model import MemberRole, Message, Member, BanType, RedirectedMessage
 
 start_time = datetime.now()
 waiting_time = 0
@@ -99,7 +99,10 @@ class Worker:
                                     caption=content,
                                     reply_to_message_id=rmr.mid if rmr else None,
                                 )
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked):
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         else:
                             RedirectedMessage(mid=masked_message.id, message=op.message, to_member=m).save()
@@ -131,7 +134,10 @@ class Worker:
                             masked_message = op.message.get_redirect_for(m)
                             if masked_message:
                                 await self.bot.edit_message_text(masked_message.to_member.user.uid, masked_message.mid, content)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked):
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -155,7 +161,10 @@ class Worker:
                                 masked_message = op.message.get_redirect_for(m)
                                 if masked_message:
                                     await self.bot.delete_messages(masked_message.to_member.user.uid, masked_message.mid)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked):
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -184,6 +193,9 @@ class Worker:
                                         masked_message.to_member.user.uid, masked_message.mid, both_sides=True, disable_notification=True
                                     )
                         except RPCError as e:
+                            if isinstance(e, UserIsBlocked):
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -207,7 +219,10 @@ class Worker:
                                 masked_message = op.message.get_redirect_for(m)
                                 if masked_message:
                                     await self.bot.unpin_chat_message(masked_message.to_member.user.uid, masked_message.mid)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked):
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1

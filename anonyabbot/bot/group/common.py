@@ -40,15 +40,20 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                 except ContinuePropagation:
                     raise
                 except OperationError as e:
-                    await self.info(f"⚠️ Fail: {e}.", context, alert=True)
+                    try:
+                        await self.info(f"⚠️ Fail: {e}.", context, alert=True)
+                    except:
+                        pass
                 except MessageNotModified:
                     pass
                 except Exception as e:
                     if isinstance(e, ContinuePropagation):
                         raise
                     logger.opt(exception=e).warning("Callback error:")
-                    await self.info(f"⚠️ Error occured.", context, alert=True)
-                    return
+                    try:
+                        await self.info(f"⚠️ Error occured.", context, alert=True)
+                    except:
+                        pass
             except UserDeactivated as e:
                 if self.group:
                     self.group.disabled = True

@@ -27,5 +27,6 @@ api_hash = "abcde1234567890abcde1234567890"
 
 [father]
 token = "12345678:AbCdEfG-123456789"
+```
 
 Your self-deployed version SHOULD clearly identify this repository on `/start`. Thanks.

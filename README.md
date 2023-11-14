@@ -1,6 +1,6 @@
 ## Anonycnbot
 
-**Anonycnbot** 是一个用于创建完全匿名群组的机器人. ([@anonycnbot](https://t.me/anonycnbot)).
+**Anonycnbot** 是一个用于创建完全匿名群组的机器人。 ([@anonycnbot](https://t.me/anonycnbot)).
 
 [![Screenshot](https://github.com/anonycnbot/.github/raw/main/images/button.svg)](https://t.me/anonycnbot)
 

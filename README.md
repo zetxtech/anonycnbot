@@ -11,9 +11,9 @@
 4. 仅存储消息ID，消息内容将不会被存储，充分考虑隐私性。
 
 ### 使用方法
-你需要前往[@anonycnbot](https://t.me/anonycnbot)，然后按照机器人的指示操作。简单来说，包含以下步骤：
-1. 在[@anonycnbot](https://t.me/anonycnbot)中点击“创建新群组”。
-2. 在[@botfather](https://t.me/botfather)中创建一个新的机器人，并将机器人的令牌转发给[@anonycnbot](https://t.me/anonycnbot)。
+你需要前往 [@anonycnbot](https://t.me/anonycnbot)，然后按照机器人的指示操作。简单来说，包含以下步骤：
+1. 在 [@anonycnbot](https://t.me/anonycnbot) 中点击“创建新群组”。
+2. 在 [@botfather](https://t.me/botfather) 中创建一个新的机器人，并将机器人的令牌转发给 [@anonycnbot](https://t.me/anonycnbot)。
 3. 此时新的机器人就成为了新的匿名群组，试试看吧!
 
 ### 自部署
@@ -28,7 +28,7 @@ api_hash = "abcde1234567890abcde1234567890"
 token = "12345678:AbCdEfG-123456789"
 ```
 
-您自行部署的版本应该在“/start”上清楚地标识此存储库。 谢谢。
+您自行部署的版本应该在`/start`界面清晰标识此存储库为来源。 谢谢。
 
 ### 英文版 / English Version
 Please use [@anonyabbot](https://t.me/anonyabbot).

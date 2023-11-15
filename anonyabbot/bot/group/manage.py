@@ -23,9 +23,9 @@ class Manage:
     ):
         context.parameters.pop("edbg_current", None)
         return (
-            f"👑 欢迎群管理员 {context.from_user.name}!\n\n"
-            "👁️‍🗨️ 这个面板仅对您可见\n"
-            "⬇️ 请点击下面的按钮来配置群组: "
+            f"👑 Welcome group admin {context.from_user.name}.\n\n"
+            "👁️‍🗨️ This panel is only visible to you.\n"
+            "⬇️ Click the buttons below to configure the group:"
         )
 
     @operation(MemberRole.ADMIN)
@@ -39,17 +39,17 @@ class Manage:
         group = self.group
         member: Member = context.from_user.get_member(self.group)
         creator = group.creator.markdown if member.role >= MemberRole.ADMIN_BAN else group.creator.masked_name
-        waiting_delay = f"{self.worker_status['time'] / self.worker_status['requests']:.1f} 秒" if self.worker_status['requests'] else "无数据"
-        msg = f"ℹ️ 群组信息: \n\n"
+        waiting_delay = f"{self.worker_status['time'] / self.worker_status['requests']:.1f}" if self.worker_status['requests'] else "inf"
+        msg = f"ℹ️ Group info:\n\n"
         fields = [
-            f"群名称: [{group.title}](t.me/{group.username})",
-            f"创建者: {creator}",
-            f"成员数: {group.n_members}",
-            f"消息数: {group.n_messages}",
-            f"平均传播延迟: {waiting_delay}",
-            f"禁用: {'**是**' if group.disabled else '否'}",
-            f"创建时间: {group.created.strftime('%Y-%m-%d')}",
-            f"最后活动时间: {group.last_activity.strftime('%Y-%m-%d')}",
+            f"Title: [{group.title}](t.me/{group.username})",
+            f"Creator: {creator}",
+            f"Members: {group.n_members}",
+            f"Messages: {group.n_messages}",
+            f"Average Delay: {waiting_delay} seconds",
+            f"Disabled: {'**Yes**' if group.disabled else 'No'}",
+            f"Created: {group.created.strftime('%Y-%m-%d')}",
+            f"Last Activity: {group.last_activity.strftime('%Y-%m-%d')}",
         ]
         msg += indent("\n".join(fields), "  ")
         return msg
@@ -111,8 +111,24 @@ class Manage:
             self.group.default_ban_group = BanGroup.generate(types)
             self.group.save()
             original.delete_instance()
-        await context.answer("✅ 成功")
+        await context.answer("✅ Succeed.")
         await self.to_menu("_group_details", context)
+
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_edit_password(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        self.set_conversation(context, "ep_password")
+        if self.group.password:
+            msg = f"ℹ️ Current group passowrd is `{self.group.password}`"
+        else:
+            msg = f"ℹ️ Group passowrd is not set. Free to join."
+        msg += f"\n\n⬇️ Type your password to set (only visible to you):"
+        return msg
 
     @operation(MemberRole.ADMIN_MSG)
     async def on_edit_welcome_message(
@@ -123,14 +139,14 @@ class Manage:
         parameters: dict,
     ):
         if self.group.welcome_message:
-            msg = f"🧾 群组欢迎消息已设置为: \n\n{self.group.welcome_message}"
+            msg = f"🧾 Group welcome message is set as:\n\n{self.group.welcome_message}"
         else:
-            msg = f"🧾 群组欢迎消息为空"
+            msg = f"🧾 Group welcome message is not set."
         if self.group.welcome_message_photo:
-            msg += f"\n\n🖼️ 群组欢迎消息头图已设置"
+            msg += f"\n\n🖼️ Group welcome message header image is set."
         if self.group.welcome_message_buttons:
-            msg += f"\n\n⌨️ 群组欢迎消息按钮已设置"
-        msg += "\n\n⬇️ 请点击下面的按钮进行配置: "
+            msg += f"\n\n⌨️ Group welcome message buttons is set."
+        msg += "\n\n⬇️ Click the buttons below to configure:"
         return msg
 
     @operation(MemberRole.ADMIN_MSG)
@@ -143,12 +159,14 @@ class Manage:
     ):
         self.set_conversation(context, "ewmm_message")
         return (
-            "⬇️ 输入新的欢迎消息 (仅对新用户自己可见, 可以包含图片): \n\n"
-            "ℹ️ 你可以用以下方法表示变量：\n"
-            "`  {name}       : 用户名`\n"
-            "`  {masked_name}: 加马赛克的用户名`\n"
-            "`  {markdown}   : 用户名并带有链接`\n\n"
-            "ℹ️ 输入 `disable` 以禁用欢迎消息"
+            "⬇️ Type new welcome message (can with images, only visible to the new user):\n\n"
+            "ℹ️ Variables:\n"
+            "  {name} : User full name\n"
+            "  {first_name} : User first name\n"
+            "  {last_name}  : User last name\n"
+            "  {masked_name}: User masked name\n"
+            "  {markdown}   : User full name with mention link\n\n"
+            "ℹ️ Type `disable` to disable welcome message."
         )
 
     @operation(MemberRole.ADMIN_MSG)
@@ -161,11 +179,11 @@ class Manage:
     ):
         self.set_conversation(context, "ewmm_button")
         return (
-            "⬇️ 定义新的欢迎消息按钮：\n\n"
-            "ℹ️ 按钮应该以以下格式定义：\n\n"
-            "`按钮1: https://button1.url | 按钮2: https://button2.url`\n\n"
-            "1. 每行都是一个按钮\n"
-            "2. 使用 t.me/username 以链接到用户 / 群组"
+            "⬇️ Define new welcome message buttons (only visible to you):\n\n"
+            "ℹ️ Buttons should be defined in the following format:\n\n"
+            "`Button1: https://button1.url | Button2: https://button2.url`\n\n"
+            "1. Each line will be a row of buttons.\n"
+            "2. Use t.me/username to redirect to a user / group.\n"
         )
 
     @operation(MemberRole.ADMIN_MSG)
@@ -181,7 +199,7 @@ class Manage:
         self.group.welcome_message_buttons = button_spec
         self.group.save()
         await self.bot.delete_messages(self.group.username, test_message_id)
-        m = await self.bot.send_message(context.message.chat.id, "✅ 成功")
+        m = await self.bot.send_message(context.message.chat.id, "✅ Succeed")
         await asyncio.sleep(5)
         await m.delete()
         await context.message.delete()
@@ -249,9 +267,9 @@ class Manage:
     ):
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "activity":
-            return "🔽 最近活跃" if desc else "🔼 最近活跃"
+            return "🔽 Sort Activity" if desc else "🔼 Sort Activity"
         else:
-            return "↔ 最近活跃"
+            return "↔ Sort Activity"
 
     @operation(MemberRole.ADMIN_BAN)
     async def on_lgm_switch_activity(
@@ -264,10 +282,8 @@ class Manage:
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "activity":
             parameters["lgm_sorting"] = ("activity", not desc)
-            await context.answer("🔼 最旧到最新" if desc else "🔽 最新到最旧")
         else:
             parameters["lgm_sorting"] = ("activity", True)
-            await context.answer("🔽 最新到最旧")
         await self.to_menu("list_group_members", context)
 
     @operation(MemberRole.ADMIN_BAN)
@@ -280,9 +296,9 @@ class Manage:
     ):
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "role":
-            return "🔽 权限角色" if desc else "🔼 权限角色"
+            return "🔽 Sort Role" if desc else "🔼 Sort Role"
         else:
-            return "↔ 权限角色"
+            return "↔ Sort Role"
 
     @operation(MemberRole.ADMIN_BAN)
     async def on_lgm_switch_role(
@@ -295,10 +311,8 @@ class Manage:
         sorting, desc = parameters.get("lgm_sorting", ("role", True))
         if sorting == "role":
             parameters["lgm_sorting"] = ("role", not desc)
-            await context.answer("🔼 权限由低到高" if desc else "🔽 权限由高到低")
         else:
             parameters["lgm_sorting"] = ("role", True)
-            await context.answer("🔽 权限由高到低")
         await self.to_menu("list_group_members", context)
 
     @operation(MemberRole.ADMIN_BAN)
@@ -323,14 +337,14 @@ class Manage:
         context.parameters.pop("edbg_current", None)
         target: Member = Member.get_by_id(parameters["member_id"])
         return (
-            f"👤 {target.user.markdown} 的详细信息：\n\n"
+            f"👤 Member profile of {target.user.markdown}:\n\n"
             f"ID: {target.user.uid}\n"
-            f"群组中的权限角色：{target.role.display.title()}\n"
-            f"加入日期：{target.created.strftime('%Y-%m-%d')}\n"
-            f"消息数：{target.n_messages}\n"
-            f"最后活动时间：{target.last_activity.strftime('%Y-%m-%d')}\n"
-            f"最后一次发信使用的面具：{target.last_mask}\n\n"
-            f"👁️‍🗨️ 此面板仅对您可见"
+            f"Role in group: {target.role.display.title()}\n"
+            f"Joining date: {target.created.strftime('%Y-%m-%d')}\n"
+            f"Message count: {target.n_messages}\n"
+            f"Last Activity: {target.last_activity.strftime('%Y-%m-%d')}\n"
+            f"Last Mask: {target.last_mask}\n\n"
+            f"👁️‍🗨️ This panel is only visible to you."
         )
 
     @operation(MemberRole.ADMIN_BAN)
@@ -363,14 +377,14 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ Can not change yourself.")
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ Permission Denied.")
             await self.to_menu("_member_detail", context)
         target.role = role
         target.save()
-        await context.answer("✅ 修改成功")
+        await context.answer("✅ Changed.")
         await self.to_menu("_member_detail", context)
 
     @operation(MemberRole.ADMIN_BAN)
@@ -455,10 +469,10 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ Can not change yourself.")
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ Permission Denied.")
             await self.to_menu("_member_detail", context)
 
         current_selection = parameters.get("embg_current", [])
@@ -472,7 +486,7 @@ class Manage:
             target.save()
             if original:
                 original.delete_instance()
-        await context.answer("✅ 修改成功")
+        await context.answer("✅ Succeed.")
         await self.to_menu("_member_detail", context)
 
     @operation(MemberRole.ADMIN_BAN)
@@ -485,9 +499,9 @@ class Manage:
     ):
         target: Member = Member.get_by_id(parameters["member_id"])
         return (
-            f"⚠️ 确定要踢除成员 {target.user.markdown} 吗? \n"
-            f"⚠️ 该成员的角色是 {target.role.display} . \n"
-            f"⚠️ 该成员已发送 {target.n_messages} 条消息. "
+            f"⚠️ Are you sure to kick the member {target.user.markdown}?\n"
+            f"⚠️ This member is currently a {target.role.display}.\n"
+            f"⚠️ This member has sent {target.n_messages} messages.\n"
         )
 
     @operation(MemberRole.ADMIN_BAN)
@@ -505,14 +519,14 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ Can not change yourself.")
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ Permission Denied.")
             await self.to_menu("_member_detail", context)
         target.role = MemberRole.BANNED
         target.save()
-        await context.answer("✅ 编辑成功")
+        await context.answer("✅ Succeed.")
         await self.to_menu("list_group_members", context)
 
     @operation(MemberRole.ADMIN)
@@ -524,4 +538,4 @@ class Manage:
         parameters: dict,
     ):
         await context.message.delete()
-        await context.answer()
+        await context.answer("✅ Closed.")

@@ -22,74 +22,74 @@ class UserRoleError(OperationError):
         displays = [r.display for r in to_iterable(roles)]
         if not reversed:
             if len(displays) == 1:
-                super().__init__(f"您不是{displays[0]}")
+                super().__init__(f"you must be a/an {displays[0]} to operate")
             else:
-                super().__init__(f'您不是{"或".join(displays)}')
+                super().__init__(f'you must be one of the {", ".join(displays)}s to operate')
         else:
             if len(displays) == 1:
-                super().__init__(f"您是{displays[0]}")
+                super().__init__(f"you are a/an {displays[0]}, so can not operate")
             else:
-                super().__init__(f'您是{"或".join(displays)}')
+                super().__init__(f'you are one of the {", ".join(displays)}s, so can not operate')
 
 
 class MemberRoleError(OperationError):
     def __init__(self, role: MemberRole, reversed=False):
         if not reversed:
-            super().__init__(f"您不是该群组的{role.display}")
+            super().__init__(f"you must be a/an {role.display} in this group to operate")
         else:
-            super().__init__(f"您是该群组{role.display}")
+            super().__init__(f"you are a/an {role.display} in this group, so can not operate")
 
 
 class BanError(OperationError):
     def __init__(self, type: BanType, member=True, until: datetime = None):
-        until_spec = f', 直到 `{until.strftime("%Y-%m-%d %H:%M")}`' if until else ""
-        super().__init__(f"{'你不能' if member else '所有人都不能'}在该群组中{type.display}{until_spec}")
+        until_spec = f' until `{until.strftime("%Y-%m-%d %H:%M")}`' if until else ""
+        super().__init__(f"{'you can not' if member else 'nobody can'} {type.display} in this group{until_spec}")
 
 
 class UserRole(IntEnum):
     _init_ = "value display"
 
-    NONE = 0, "未知用户"
-    BANNED = 10, "被封禁用户"
-    GROUPER = 20, "群组创建者用户"
-    AWARDED = 30, "荣誉用户"
-    PAYING = 40, "付费用户"
-    ADMIN = 90, "系统管理员"
-    CREATOR = 100, "系统创建者"
+    NONE = 0, "unknown user"
+    BANNED = 10, "banned user"
+    GROUPER = 20, "group creator user"
+    AWARDED = 30, "awareded user"
+    PAYING = 40, "paying user"
+    ADMIN = 90, "system admin"
+    CREATOR = 100, "system creator"
 
 
 class MemberRole(IntEnum):
     _init_ = "value display"
 
-    NONE = 0, "未知用户"
-    BANNED = 10, "封禁用户"
-    LEFT = 20, "退群用户"
-    GUEST = 30, "游客"
-    MEMBER = 40, "成员"
-    ADMIN = 60, "管理员"
-    ADMIN_MSG = 70, "可以置顶消息的管理员"
-    ADMIN_BAN = 80, "可以封禁其他用户的管理员"
-    ADMIN_ADMIN = 90, "可以设置管理员的管理员"
-    CREATOR = 100, "创建者"
+    NONE = 0, "unknown user"
+    BANNED = 10, "banned user"
+    LEFT = 20, "left user"
+    GUEST = 30, "guest"
+    MEMBER = 40, "member"
+    ADMIN = 60, "admin that can bypass bans"
+    ADMIN_MSG = 70, "admin that can pin massages"
+    ADMIN_BAN = 80, "admin that can ban others"
+    ADMIN_ADMIN = 90, "admin that can set admins and reveal"
+    CREATOR = 100, "creator"
 
 
 class BanType(IntEnum):
     _init_ = "value display"
 
-    NONE = 0, "未知"
-    RECEIVE = 10, "接收消息"
-    MESSAGE = 20, "发送消息"
-    MEDIA = 21, "发送带有媒体的消息"
-    STICKER = 22, "发送贴纸"
-    MARKUP = 23, "发送带有按钮的消息"
-    LONG = 24, "发送长度超过 200 个字符的消息"
-    LINK = 25, "发送包含链接的消息"
-    PIN_MASK = 30, "设定面具"
-    LONG_MASK_1 = 40, "设定超过 1 个 emoji 的面具"
-    LONG_MASK_2 = 41, "设定超过 2 个 emoji 的面具"
-    LONG_MASK_3 = 42, "设定超过 3 个 emoji 的面具"
-    PM_USER = 50, "私聊其他用户"
-    PM_ADMIN = 51, "私聊管理员"
+    NONE = 0, "unknown"
+    RECEIVE = 10, "receive messages from others"
+    MESSAGE = 20, "send messages"
+    MEDIA = 21, "send messages with medias"
+    STICKER = 22, "send stickers"
+    MARKUP = 23, "send messages with reply markups"
+    LONG = 24, "send messages longer than 200 characters"
+    LINK = 25, "send messages including links or mentions"
+    PIN_MASK = 30, "pin a mask"
+    LONG_MASK_1 = 40, "pin a mask longer than 1 emojis"
+    LONG_MASK_2 = 41, "pin a mask longer than 2 emojis"
+    LONG_MASK_3 = 42, "pin a mask longer than 3 emojis"
+    PM_USER = 50, "pm other user in the group"
+    PM_ADMIN = 51, "pm admins in the group"
 
 
 class EnumField(IntegerField):

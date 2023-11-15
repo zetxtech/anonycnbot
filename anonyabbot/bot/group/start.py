@@ -20,12 +20,11 @@ class Start:
             )
         else:
             msg = (
-                f"🌈 欢迎加入匿名群组 **{self.group.title}**!\n\n"
-                "所有发送给机器人的消息都将被转发给所有成员, 您的身份被隐藏. \n"
-                "您将使用一个 emoji 作为您的面具进行聊天.\n"
-                "只有管理员才能看到您面具背后的真实身份.\n"
-                "请开始化妆舞会吧!\n\n"
-                "本机器人由 [@anonycnbot](t.me/anonycnbot) 创建."
+                "🌈 Welcome to this anonymous group powered by [@anonyabbot](t.me/anonyabbot).\n\n"
+                "All messages send to the bot will be redirected to all members with your identity hiden.\n"
+                "You will use an emoji as your mask during chatting.\n"
+                "Only admins can reveal your identity.\n"
+                "Have fun!"
             )
 
         if button_spec:
@@ -73,13 +72,13 @@ class Start:
                 )
             else:
                 return (
-                    "🌈 群组状态：\n\n"
-                    f"成员数：{self.group.n_members}\n"
-                    f"非游客成员数：{self.group._all_has_role(MemberRole.MEMBER).count()}\n\n"
-                    "👤 您的成员信息：\n\n"
-                    f"权限身份：{member.role.display.title()}\n"
-                    f'面具：{mask if mask else "<未激活>"}\n\n'
-                    f"👁️‍🗨️ 此面板仅对您可见. "
+                    "🌈 Group status:\n\n"
+                    f" Members: {self.group.n_members}\n"
+                    f" Non-Guests: {self.group._all_has_role(MemberRole.MEMBER).count()}\n\n"
+                    "👤 Your membership:\n\n"
+                    f" Role: {member.role.display.title()}\n"
+                    f' Mask: {mask if mask else "<Not Active>"}\n\n'
+                    f"👁️‍🗨️ This panel is only visible to you."
                 )
         else:
             Member.create(group=self.group, user=user, role=MemberRole.GUEST)
@@ -103,7 +102,7 @@ class Start:
             await context.answer("⚠️ Creator of the group can not leave.")
             await self.to_menu("start", context)
             return
-        return f"⚠️ 你确定要退出这个群组?\n⚠️ 你当前的权限角色是: {member.role.display}."
+        return f"⚠️ Are you sure to leave the group?\n⚠️ Your current role is: {member.role.display}."
 
     @operation()
     async def on_leave_group(
@@ -116,7 +115,7 @@ class Start:
         member: Member = context.from_user.get_member(self.group)
         member.role = MemberRole.LEFT
         member.save()
-        await context.answer("✅ 您已退出群组, 将不再收到消息.", show_alert=True)
+        await context.answer("✅ You have left the group and will no longer receive messages.", show_alert=True)
         await asyncio.sleep(2)
         await context.message.delete()
         return
@@ -140,4 +139,4 @@ class Start:
         parameters: dict,
     ):
         await context.message.delete()
-        await context.answer()
+        await context.answer("✅ Closed.")

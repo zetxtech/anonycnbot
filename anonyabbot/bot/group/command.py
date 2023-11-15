@@ -73,7 +73,7 @@ class OnCommand:
         await asyncio.sleep(120)
         if await msg.delete():
             self.set_conversation(message, None)
-            await info("⚠️ 会话超时", 2)
+            await info("⚠️ 会话超时", time=2)
 
     @operation()
     async def on_ban(self: "anonyabbot.GroupBot", client: Client, message: TM):

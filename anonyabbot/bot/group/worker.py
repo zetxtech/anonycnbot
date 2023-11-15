@@ -76,7 +76,7 @@ class Worker:
                     if content:
                         content = f"{op.message.mask} | {content}"
                     else:
-                        content = f"{op.message.mask} has sent a media."
+                        content = f"{op.message.mask} 发送了媒体."
 
                     m: Member
                     for m in self.group.user_members():
@@ -124,7 +124,7 @@ class Worker:
                     if content:
                         content = f"{op.message.mask} | {content}"
                     else:
-                        content = f"{op.message.mask} has sent a media."
+                        content = f"{op.message.mask} 发送了媒体."
 
                     m: Member
                     for m in self.group.user_members():

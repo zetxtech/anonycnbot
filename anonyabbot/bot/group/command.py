@@ -17,7 +17,7 @@ class OnCommand:
         member: Member = message.from_user.get_member(self.group)
         rm = message.reply_to_message
         if not rm:
-            raise OperationError("no message replied")
+            raise OperationError("没有回复消息")
         mr: Message = Message.get_or_none(mid=rm.id, member=member)
         if not mr:
             rmr = RedirectedMessage.get_or_none(mid=rm.id, to_member=member)
@@ -29,9 +29,9 @@ class OnCommand:
                     if pmm:
                         mr: PMMessage = pmm
                     else:
-                        raise OperationError("this is not a anonymous message or is outdated")
+                        raise OperationError("这不是匿名消息或已过时")
                 else:
-                    raise OperationError("this is not a anonymous message or is outdated")
+                    raise OperationError("这不是匿名消息或已过时")
         return member, mr
 
     @operation(MemberRole.MEMBER)
@@ -42,17 +42,17 @@ class OnCommand:
         member.check_ban(BanType.MESSAGE)
         if not mr.member.id == member.id:
             if not member.role >= MemberRole.ADMIN_BAN:
-                return await info(f"⚠️ Only messages sent by you can be deleted.")
+                return await info(f"⚠️ 只能删除您发送的消息")
         e = asyncio.Event()
         op = DeleteOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
-        msg: TM = await info(f"🔃 Message revoking from all users...", time=None)
+        msg: TM = await info(f"🔃 正在删除该消息...", time=None)
         try:
             await asyncio.wait_for(e.wait(), 120)
         except asyncio.TimeoutError:
-            await msg.edit("⚠️ Timeout to revoke this message.")
+            await msg.edit("⚠️ 删除该消息超时")
         else:
-            await msg.edit(f"🗑️ Message deleted ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests})")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -62,18 +62,18 @@ class OnCommand:
         info = async_partial(self.info, context=message)
         member: Member = message.from_user.get_member(self.group)
         _, mask = await self.unique_mask_pool.get_mask(member, renew=True)
-        await info(f"🌈 Your mask has been changed to: {mask}")
+        await info(f"🌈 你的面具已更改为: {mask}")
 
     @operation(MemberRole.MEMBER)
     async def on_setmask(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        msg: TM = await info("⬇️ Please enter an emoji as your mask:", time=None)
+        msg: TM = await info("⬇️ 请输入 emoji 作为您的面具:", time=None)
         self.set_conversation(message, "sm_mask", data=msg)
         await asyncio.sleep(120)
         if await msg.delete():
             self.set_conversation(message, None)
-            await info("⚠️ Timeout.", 2)
+            await info("⚠️ 会话超时", 2)
 
     @operation()
     async def on_ban(self: "anonyabbot.GroupBot", client: Client, message: TM):
@@ -92,12 +92,12 @@ class OnCommand:
                 pmban = PMBan.get_or_none(from_member=target, to_member=member)
                 if not pmban:
                     PMBan.create(from_member=target, to_member=member)
-                return await info("✅ This member will not send private messages to you any more.")
+                return await info("✅ 该成员给您发的私信将被屏蔽")
         else:
             user = await self.bot.get_users(uid)
             target = user.get_member(self.group)
             if not target:
-                raise OperationError("member not found in this group")
+                raise OperationError("成员已不在群组中")
             member: Member = message.from_user.get_member(self.group)
         member.validate(MemberRole.ADMIN_BAN)
         if target.role >= MemberRole.ADMIN:
@@ -105,15 +105,15 @@ class OnCommand:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            return await info("⚠️ Can not ban yourself.")
+            return await info("⚠️ 不能封禁自己")
         if target.role >= member.role:
-            return await info("⚠️ Permission denied.")
+            return await info("⚠️ 您的权限低于对方权限")
         if target.role == MemberRole.BANNED:
-            return await info("⚠️ The user is already banned.")
+            return await info("⚠️ 该成员本就处于封禁状态")
 
         target.role = MemberRole.BANNED
         target.save()
-        return await info("🚫 Member banned.")
+        return await info("🚫 成员已封禁")
 
     @operation()
     async def on_unban(self: "anonyabbot.GroupBot", client: Client, message: TM):
@@ -132,12 +132,12 @@ class OnCommand:
                 pmban = PMBan.get_or_none(from_member=target, to_member=member)
                 if pmban:
                     pmban.delete_instance()
-                return await info("✅ This member is now able to send private messages.")
+                return await info("✅ 此成员现在可以发送私人消息给您了")
         else:
             user = await self.bot.get_users(uid)
             target = user.get_member(self.group)
             if not target:
-                raise OperationError("member not found in this group")
+                raise OperationError("成员已不在群组中")
             member: Member = message.from_user.get_member(self.group)
         member.validate(MemberRole.ADMIN_BAN)
         if target.role >= MemberRole.ADMIN:
@@ -145,15 +145,16 @@ class OnCommand:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            return await info("⚠️ Can not unban yourself.")
+            return await info("⚠️ 无法解封自己")
         if target.role >= member.role:
-            return await info("⚠️ Permission denied.")
+            return await info("⚠️ 您的权限低于对方权限")
         if not target.role == MemberRole.BANNED:
-            return await info("⚠️ The user is not banned.")
+            return await info("⚠️ 该用户未被封禁")
+
 
         target.role = MemberRole.GUEST
         target.save()
-        return await info("✅ Member unbanned.")
+        return await info("✅ 成员已解封")
 
     @operation(MemberRole.ADMIN_MSG)
     async def on_pin(self: "anonyabbot.GroupBot", client: Client, message: TM):
@@ -163,13 +164,13 @@ class OnCommand:
         e = asyncio.Event()
         op = PinOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
-        msg: TM = await info(f"🔃 Pinning message for all users...", time=None)
+        msg: TM = await info(f"🔃 正在置顶消息...", time=None)
         try:
             await asyncio.wait_for(e.wait(), 120)
         except asyncio.TimeoutError:
-            await msg.edit("⚠️ Timeout to pin this message.")
+            await msg.edit("⚠️ 置顶消息超时")
         else:
-            await msg.edit(f"📌 Message pinned ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit(f"📌 消息已置顶 ({op.requests-op.errors}/{op.requests})")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -181,13 +182,13 @@ class OnCommand:
         e = asyncio.Event()
         op = UnpinOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
-        msg: TM = await info(f"🔃 Unpinning message for all users...", time=None)
+        msg: TM = await info(f"🔃 正在取消置顶消息...", time=None)
         try:
             await asyncio.wait_for(e.wait(), 120)
         except asyncio.TimeoutError:
-            await msg.edit("⚠️ Timeout to unpin this message.")
+            await msg.edit("⚠️ 取消置顶此消息超时")
         else:
-            await msg.edit(f"📌 Message unpinned ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit(f"📌 消息已取消置顶 ({op.requests-op.errors}/{op.requests}).")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -198,15 +199,15 @@ class OnCommand:
         _, mr = self.get_member_reply_message(message)
         target: Member = mr.member
         msg = (
-            f"ℹ️ Profile of this member:\n\n"
-            f"Name: {target.user.name}\n"
+            f"ℹ️ 此成员的信息:\n\n"
+            f"姓名: {target.user.name}\n"
             f"ID: {target.user.uid}\n"
-            f"Role in group: {target.role.display.title()}\n"
-            f"Joining date: {target.created.strftime('%Y-%m-%d')}\n"
-            f"Message count: {target.n_messages}\n"
-            f"Last Activity: {target.last_activity.strftime('%Y-%m-%d')}\n"
-            f"Last Mask: {target.last_mask}\n\n"
-            f"👁️‍🗨️ This panel is only visible to you."
+            f"群组中的角色: {target.role.display.title()}\n"
+            f"加入日期: {target.created.strftime('%Y-%m-%d')}\n"
+            f"消息总数: {target.n_messages}\n"
+            f"最近活跃: {target.last_activity.strftime('%Y-%m-%d')}\n"
+            f"最近面具: {target.last_mask}\n\n"
+            f"👁️‍🗨️ 此面板仅对您可见"
         )
         await info(msg, time=15)
 
@@ -232,15 +233,15 @@ class OnCommand:
             if target.role >= MemberRole.ADMIN:
                 member.check_ban(BanType.PM_ADMIN)
             if target.role <= MemberRole.LEFT:
-                raise OperationError('this user is not in this group anymore')
+                raise OperationError('成员已不在群组中')
             if target.check_ban(BanType.RECEIVE, check_group=False, fail=False):
-                raise OperationError('this user is banned from receiving messages')
+                raise OperationError('此用户被禁止接收消息')
             pmban = PMBan.get_or_none(from_member=member, to_member=target)
             if pmban:
-                raise OperationError('this user is not willing to receive private messages from you')
+                raise OperationError('此用户不想接收来自您的私信')
             self.check_message(message, member)
         except OperationError as e:
-            await info(f"⚠️ Sorry, {e}, and this message will be deleted soon.", time=30)
+            await info(f"⚠️ 对不起, {e}, 此消息将被删除. ", time=30)
             await message.delete()
             return
         
@@ -251,16 +252,16 @@ class OnCommand:
             try:
                 created, mask = await self.unique_mask_pool.get_mask(member)
             except MaskNotAvailable:
-                await info(f"⚠️ Sorry, no mask is currently available, and this message will be deleted soon.", time=30)
+                await info(f"⚠️ 对不起, 目前没有可用的面具, 此消息将被删除. ", time=30)
                 await message.delete()
                 return
         
         content = f'{mask} (👁️ PM) | {content}'
         
         if created:
-            msg: TM = await info(f"🔃 PM message sending as {mask} ...", time=None)
+            msg: TM = await info(f"🔃 正在以 {mask} 为面具发送私信...", time=None)
         else:
-            msg: TM = await info("🔃 PM message sending ...", time=None)
+            msg: TM = await info("🔃 正在发送私信...", time=None)
         
         try:
             if message.text:
@@ -269,19 +270,19 @@ class OnCommand:
             else:
                 masked_message = await message.copy(target.user.uid, caption=content)
         except RPCError as e:
-            await msg.edit('⚠️ Fail to send, and this message will be deleted soon.')
+            await msg.edit('⚠️ 发送失败, 此消息将被删除. ')
             await asyncio.sleep(30)
             await msg.delete()
             return
         else:
             PMMessage.create(from_member=member, to_member=target, mid=message.id, redirected_mid=masked_message.id)
-            await msg.edit('✅ PM message sent.')
+            await msg.edit('✅ 私信已发送')
             await asyncio.sleep(5)
             await msg.delete()
 
 
     @operation(MemberRole.MEMBER)
-    async def on_pm(self: "anonyabbot.GroupBot", client: Client, message: TM):
+    async def on_pm(self: "anonyabot.GroupBot", client: Client, message: TM):
         info = async_partial(self.info, context=message)
         
         content = message.text or message.caption
@@ -291,7 +292,7 @@ class OnCommand:
             _, content = cmd
         except ValueError:
             await message.delete()
-            return await info('⚠️ Use "/pm [text]" to send private messages.')
+            return await info('⚠️ 使用 "/pm [text]" 发送私信')
         
         message.text = content
 

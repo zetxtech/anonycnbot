@@ -24,5 +24,5 @@ class FatherBot(MenuBot, _Methods):
     async def setup(self):
         self.bot.add_handler(MessageHandler(self.on_messagge))
         self.menu.setup(self.bot)
-        await self.bot.set_bot_commands([BotCommand("start", "Open control panel")])
+        await self.bot.set_bot_commands([BotCommand("start", "打开面板")])
         logger.info(f"Now listening updates in: @{self.bot.me.username}.")

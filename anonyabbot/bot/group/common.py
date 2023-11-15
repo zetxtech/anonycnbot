@@ -29,11 +29,11 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                     if not conversation:
                         self.set_conversation(context, status=None)
                     if (not allow_disabled) and self.group.disabled:
-                        raise OperationError("this group has been deleted and cannot be operated")
+                        raise OperationError("此群组已被删除, 无法进行操作")
                     if req:
                         member: Member = context.from_user.get_member(self.group)
                         if not member:
-                            raise OperationError("you are not in this group")
+                            raise OperationError("您不在此群组中")
                         member.validate(req, fail=True)
                         member.touch()
                     return await func(*args, **kw)
@@ -41,7 +41,7 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                     raise
                 except OperationError as e:
                     try:
-                        await self.info(f"⚠️ Fail: {e}.", context, alert=True)
+                        await self.info(f"⚠️ 失败: {e}.", context, alert=True)
                         if isinstance(context, TM):
                             await context.delete()
                     except:
@@ -53,7 +53,7 @@ def operation(req: MemberRole = MemberRole.GUEST, conversation=False, allow_disa
                         raise
                     logger.opt(exception=e).warning("Callback error:")
                     try:
-                        await self.info(f"⚠️ Error occured.", context, alert=True)
+                        await self.info(f"⚠️ 发生错误.", context, alert=True)
                     except:
                         pass
             except UserDeactivated as e:

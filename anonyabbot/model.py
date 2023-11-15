@@ -339,7 +339,7 @@ class BanGroupEntry(BaseModel):
 
 class Group(BaseModel):
     id = AutoField()
-    uid = IntegerField(unique=True)
+    uid = IntegerField(index=True)
     token = CharField(max_length=50, unique=True)
     username = CharField(index=True)
     title = CharField(index=True, null=True)
@@ -467,7 +467,7 @@ class Member(BaseModel):
 class Message(BaseModel):
     id = AutoField()
     group = ForeignKeyField(Group, backref="messages")
-    mid = IntegerField(unique=True)
+    mid = IntegerField(index=True)
     member = ForeignKeyField(Member, backref="messages")
     mask = CharField()
     updated = DateTimeField(default=datetime.now)
@@ -483,7 +483,7 @@ class Message(BaseModel):
 
 class RedirectedMessage(BaseModel):
     id = AutoField()
-    mid = IntegerField(unique=True)
+    mid = IntegerField(index=True)
     message = ForeignKeyField(Message, backref="redirects")
     to_member = ForeignKeyField(Member, backref="redirected_messages")
     created = DateTimeField(default=datetime.now)
@@ -502,6 +502,6 @@ class PMMessage(BaseModel):
     group = ForeignKeyField(Group, backref="pm_bans")
     from_user = ForeignKeyField(User, null=True)
     to_user = ForeignKeyField(User, backref="pm_messages")
-    message = IntegerField(unique=True)
-    redirected_message = IntegerField(unique=True)
+    message = IntegerField(index=True)
+    redirected_message = IntegerField(index=True)
     time = DateTimeField(default=datetime.now)

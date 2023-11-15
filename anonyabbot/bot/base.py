@@ -21,7 +21,7 @@ from pyrubrum import (
     PageStyle,
 )
 
-from .. import __name__ as __product__
+from .. import __product__
 
 from ..utils import to_iterable
 from ..config import config
@@ -151,7 +151,7 @@ class MenuBot(Bot):
         if button is None:
             func = getattr(self, f"button_{id.lstrip('_')}", None)
             if not func:
-                button = "✅ OK"
+                button = "✅ 确定"
             else:
                 button = func
         if display is None:
@@ -175,7 +175,7 @@ class MenuBot(Bot):
             "parse_mode": ParseMode.MARKDOWN if markdown else ParseMode.DISABLE,
         }
         style_params = {
-            "back_text": "◀️ Back",
+            "back_text": "◀️ 返回",
             "back_enable": False if back == False else True,
             "back_to": back,
         }
@@ -256,6 +256,7 @@ class MenuBot(Bot):
         id: str,
         button: str = None,
         header: str = None,
+        footer: str = None,
         filter: Filter = None,
         back=None,
         web=False,
@@ -278,6 +279,8 @@ class MenuBot(Bot):
         )
         if header is None:
             header = getattr(self, f"header_{id.lstrip('_')}", None)
+        if footer is None:
+            footer = getattr(self, f"footer_{id.lstrip('_')}", None)
         style = PageStyle(
             **style_params,
             limit=per_line,
@@ -288,7 +291,7 @@ class MenuBot(Bot):
             next_page_text="➡️",
             previous_page_text="⬅️",
         )
-        return ContentPageMenu(**menu_params, header=header, style=style)
+        return ContentPageMenu(**menu_params, header=header, footer=footer, style=style)
 
     def _link(
         self,

@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from loguru import logger
 
@@ -14,6 +15,10 @@ token_cls = {}
 
 start_queue = asyncio.Queue()
 
+start_time = datetime.now()
+
+worker_status = {'time': 0, 'requests': 0, 'errors': 0}
+worker_status_lock = asyncio.Lock()
 
 async def queue_monitor():
     while True:

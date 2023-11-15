@@ -7,7 +7,7 @@ with open("requirements.txt") as requirements_file:
     requirements = requirements_file.read().splitlines()
 
 setup(
-    author="jackzzs",
+    author="anonyabbot",
     author_email="jackzzs@outlook.com",
     python_requires=">=3.10,<3.11",
     classifiers=[
@@ -23,9 +23,9 @@ setup(
     long_description_content_type="text/markdown",
     include_package_data=True,
     keywords=["telegram", "bot", "server"],
-    name="anonyabbot",
+    name="anonycnbot",
     packages=find_packages(include=["anonyabbot", "anonyabbot.*"]),
-    url="https://github.com/jackzzs/anonyabbot",
+    url="https://github.com/anonycnbot/anonycnbot",
     version="1.0.0",
     zip_safe=False,
 )

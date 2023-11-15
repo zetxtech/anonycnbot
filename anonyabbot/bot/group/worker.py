@@ -3,16 +3,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from pyrogram.types import Message as TM
-from pyrogram.errors import RPCError
+from pyrogram.errors import RPCError, UserIsBlocked
 
 import anonyabbot
 
-from ...model import Message, Member, BanType, RedirectedMessage
-
-start_time = datetime.now()
-waiting_time = 0
-waiting_requests = 0
-
+from ...model import MemberRole, Message, Member, BanType, RedirectedMessage
+from .. import pool
 
 @dataclass(kw_only=True)
 class Operation:
@@ -52,13 +48,22 @@ class UnpinOperation(Operation):
 
 
 class Worker:
+    async def report_status(self: "anonyabbot.GroupBot", time: int, requests: int, errors: int):
+        self.worker_status['time'] += time
+        self.worker_status['requests'] += requests
+        self.worker_status['errors'] += errors
+        async with pool.worker_status_lock:
+            pool.worker_status['time'] += time
+            pool.worker_status['requests'] += requests
+            pool.worker_status['errors'] += errors
+    
     async def worker(self: "anonyabbot.GroupBot"):
         global waiting_time
         global waiting_requests
 
         while True:
+            op = await self.queue.get()
             try:
-                op = await self.queue.get()
                 if not op:
                     break
                 if isinstance(op, BroadcastOperation):
@@ -71,7 +76,7 @@ class Worker:
                     if content:
                         content = f"{op.message.mask} | {content}"
                     else:
-                        content = f"{op.message.mask} has sent a media."
+                        content = f"{op.message.mask} 发送了媒体."
 
                     m: Member
                     for m in self.group.user_members():
@@ -79,7 +84,7 @@ class Worker:
                             continue
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         rmr = None
@@ -99,7 +104,10 @@ class Worker:
                                     caption=content,
                                     reply_to_message_id=rmr.mid if rmr else None,
                                 )
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         else:
                             RedirectedMessage(mid=masked_message.id, message=op.message, to_member=m).save()
@@ -116,7 +124,7 @@ class Worker:
                     if content:
                         content = f"{op.message.mask} | {content}"
                     else:
-                        content = f"{op.message.mask} has sent a media."
+                        content = f"{op.message.mask} 发送了媒体."
 
                     m: Member
                     for m in self.group.user_members():
@@ -124,14 +132,17 @@ class Worker:
                             continue
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         try:
                             masked_message = op.message.get_redirect_for(m)
                             if masked_message:
                                 await self.bot.edit_message_text(masked_message.to_member.user.uid, masked_message.mid, content)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -145,7 +156,7 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
+                        if m.check_ban(BanType.RECEIVE, check_group=False, fail=False):
                             continue
 
                         try:
@@ -155,7 +166,10 @@ class Worker:
                                 masked_message = op.message.get_redirect_for(m)
                                 if masked_message:
                                     await self.bot.delete_messages(masked_message.to_member.user.uid, masked_message.mid)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -169,9 +183,7 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
-                            continue
-
+                        
                         try:
                             if m.id == op.message.member.id:
                                 await self.bot.pin_chat_message(
@@ -184,6 +196,9 @@ class Worker:
                                         masked_message.to_member.user.uid, masked_message.mid, both_sides=True, disable_notification=True
                                     )
                         except RPCError as e:
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
@@ -197,8 +212,6 @@ class Worker:
                     for m in self.group.user_members():
                         if m.is_banned:
                             continue
-                        if m.cannot(BanType.RECEIVE, check_group=False):
-                            continue
 
                         try:
                             if m.id == op.message.member.id:
@@ -207,14 +220,18 @@ class Worker:
                                 masked_message = op.message.get_redirect_for(m)
                                 if masked_message:
                                     await self.bot.unpin_chat_message(masked_message.to_member.user.uid, masked_message.mid)
-                        except RPCError:
+                        except RPCError as e:
+                            if isinstance(e, UserIsBlocked) and not m.role == MemberRole.CREATOR:
+                                m.role = MemberRole.LEFT
+                                m.save()
                             op.errors += 1
                         finally:
                             op.requests += 1
 
-                op.finished.set()
-                waiting_time += (datetime.now() - op.created).total_seconds()
-                waiting_requests += op.requests
-
+                
+                waiting_time = (datetime.now() - op.created).total_seconds() 
+                await self.report_status(waiting_time, op.requests, op.errors)
             except Exception as e:
                 self.log.opt(exception=e).warning("Worker error:")
+            finally:
+                op.finished.set()

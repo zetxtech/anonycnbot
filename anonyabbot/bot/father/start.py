@@ -29,7 +29,7 @@ class Start:
                 elif cmds[1].startswith("_g_"):
                     gid = remove_prefix(cmds[1], "_g_")
                     return await self.to_menu("_group_detail", context, gid=gid)
-        return f"🌈 Welcome {context.from_user.name}!\n\n" "This bot allows you to create a completely anonymous group."
+        return f"🌈 欢迎 {context.from_user.name}!\n\n" "此机器人将帮助您创建一个全匿名群组. "
 
     @operation(prohibited=None)
     async def on_my_info(
@@ -41,18 +41,18 @@ class Start:
     ):
         user: User = context.from_user.get_record()
         msg = (
-            f"ℹ️ Profile of {user.name}:\n\n"
+            f"ℹ️ {user.name} 的个人信息:\n\n"
             f" ID: {user.uid}\n"
-            f" Created Groups: {user.created_groups.count()}\n"
-            f" Created: {user.created.strftime('%Y-%m-%d')}\n"
+            f" 创建的群组数: {user.created_groups.count()}\n"
+            f" 首次使用: {user.created.strftime('%Y-%m-%d')}\n"
         )
         roles = [r.display for r in user.roles()]
         if roles:
-            msg += f"\n👑 Roles:\n"
+            msg += f"\n👑 角色:\n"
             for r in roles:
                 msg += f"  - {r.title()}\n"
         return msg
-
+    
     @operation()
     async def on_use_code(
         self: "anonyabbot.FatherBot",
@@ -62,7 +62,7 @@ class Start:
         parameters: dict,
     ):
         self.set_conversation(context, "use_code")
-        return "❓ Type your code:"
+        return "❓ 输入角色码:"
 
     @operation()
     async def on_new_group(
@@ -74,10 +74,12 @@ class Start:
     ):
         self.set_conversation(context, "ng_token")
         return (
-            "🌈 Guide\n\n"
-            "Your anonymous group will be a newly created bot (yes, bot).\n"
-            "Any information sent by anyone to the bot will be forwarded to all users with their identity hidden.\n"
-            "You need to create a new bot through @botfather and forward the message including bot token to me."
+            "🌈 您需要创建一个新的 bot 作为匿名群组:\n\n"
+            "1. 通过 @botfather 创建新 bot.\n"
+            "   1. 使用命令 `/newbot`\n"
+            "   2. 输入群标题, 例如XX群\n"
+            "   2. 输入群的用户名, 以 bot 结尾\n\n"
+            "2. 将包含 **bot token** 的消息发送给我."
         )
 
     @operation()
@@ -95,9 +97,10 @@ class Start:
             item = f"{i+1} | [{truncate_str(g.title, 45)}](t.me/{g.username})"
             items.append((item, str(i + 1), g.id))
         if not items:
-            await self.info("⚠️ No group available.", context=context)
+            await self.info("⚠️ 你没有创建群组", context=context)
             await self.to_menu("start", context)
-        return items
+        else:
+            return items
 
     @operation()
     async def on_jump_group_detail(
@@ -119,18 +122,18 @@ class Start:
         parameters: dict,
     ):
         group: Group = Group.get_by_id(parameters["group_id"])
-        msg = f"⭐ Group info for [@{group.username}](t.me/{group.username}):\n\n"
+        msg = f"⭐ 匿名群组 [@{group.username}](t.me/{group.username}) 的信息: \n\n"
         fields = [
-            f"Title: [{group.title}](t.me/{group.username})",
-            f"Creator: {group.creator.markdown}",
-            f"Members: {group.n_members}",
-            f"Messages: {group.n_messages}",
-            f"Disabled: {'**Yes**' if group.disabled else 'No'}",
-            f"Created: {group.created.strftime('%Y-%m-%d')}",
-            f"Last Activity: {group.last_activity.strftime('%Y-%m-%d')}",
+            f"群组名称: [{group.title}](t.me/{group.username})",
+            f"创建者: {group.creator.markdown}",
+            f"成员数: {group.n_members}",
+            f"消息数: {group.n_messages}",
+            f"已禁用: {'**是**' if group.disabled else '否'}",
+            f"创建时间: {group.created.strftime('%Y-%m-%d')}",
+            f"最后活动时间: {group.last_activity.strftime('%Y-%m-%d')}",
         ]
         msg += indent("\n".join(fields), "  ")
-        msg += "\n\n⬇️ Click the buttons below to configure the group:"
+        msg += "\n\n⬇️ 请点击下面的按钮来配置群组: "
         return msg
 
     @operation()
@@ -143,9 +146,9 @@ class Start:
     ):
         group: Group = Group.get_by_id(parameters["group_id"])
         return (
-            f"⚠️ Are you sure to delete the group [@{group.username}](t.me/{group.username})?\n"
-            f"⚠️ This group has {group.n_members} members and {group.n_messages} messages.\n"
-            f'⚠️ This group was created at {group.created.strftime("%Y-%m-%d")}.'
+            f"⚠️ 确认删除群组 [@{group.username}](t.me/{group.username})?\n"
+            f"⚠️ 此群组有 {group.n_members} 个成员和 {group.n_messages} 条消息. \n"
+            f'⚠️ 此群组于 {group.created.strftime("%Y-%m-%d")} 创建. '
         )
 
     @operation()
@@ -160,5 +163,5 @@ class Start:
         await stop_group_bot(group.token)
         group.disabled = True
         group.save()
-        await context.answer("✅ Group deleted.")
+        await context.answer("✅ 群组已删除")
         await self.to_menu("list_group", context)

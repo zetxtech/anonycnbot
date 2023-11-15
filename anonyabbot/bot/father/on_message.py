@@ -24,48 +24,51 @@ class OnMessage:
         user: User = message.from_user.get_record()
         if not conv:
             message.continue_propagation()
-        if message.text:
-            if message.text.startswith("/"):
-                message.continue_propagation()
-            if conv.status == "use_code":
-                used = user.use_code(message.text)
-                if used:
-                    msg = "ℹ️ You have obtained the following roles:\n"
-                    for u in used:
-                        days = u.days if u.days else "permanent"
-                        msg += f" {u.role.display} ({days})\n"
-                else:
-                    msg = "⚠️ Invalid code."
-                return await info(msg)
-            if conv.status == "ng_token":
-                match = re.search(r"[0-9]{8,10}:[a-zA-Z0-9_-]{35}", message.text)
-                if not match:
-                    return await info("⚠️ Invalid token.")
-                token = match.group(0)
-                group = Group.get_or_none(token=token)
-                if group:
-                    if group.disabled:
-                        msg = (
-                            "⚠️ The bot is deleted.\n\n"
-                            "if you want to recreate it, regenerate new token from [@botfather](t.me/botfather).\n"
-                            "if you want to recover it, contact system admin.\n"
-                        )
-                        return await info(msg)
+        try:
+            if message.text:
+                if message.text.startswith("/"):
+                    message.continue_propagation()
+                if conv.status == "use_code":
+                    used = user.use_code(message.text)
+                    if used:
+                        msg = "ℹ️ 你已成为以下角色:\n"
+                        for u in used:
+                            days = u.days if u.days else "永久"
+                            msg += f" {u.role.display} ({days})\n"
                     else:
-                        return await info("⚠️ The bot is already a anonymous group.")
-                msg = await info("ℹ️ OK, please wait for startup ...")
-                try:
-                    groupbot = await start_group_bot(token, creator=user)
-                except asyncio.TimeoutError:
-                    await msg.delete()
-                    return await info("⚠️ Timeout to start group bot, please retry later.")
-                except RPCError as e:
-                    await msg.delete()
-                    return await info(f"⚠️ Fail to start group bot:\n{e.MESSAGE.format(value=e.value)}.")
-                else:
-                    await msg.delete()
-                    return await info(
-                        f"✅ Succeed. You can access your anonymous group [@{groupbot.group.username}](t.me/{groupbot.group.username}) now."
-                    )
+                        msg = "⚠️ 无效的角色码"
+                    return await info(msg)
+                if conv.status == "ng_token":
+                    match = re.search(r"[0-9]{8,10}:[a-zA-Z0-9_-]{35}", message.text)
+                    if not match:
+                        return await info("⚠️ 无效的 bot 令牌")
+                    token = match.group(0)
+                    group = Group.get_or_none(token=token)
+                    if group:
+                        if group.disabled:
+                            msg = (
+                                "⚠️ 该群组已被删除. \n\n"
+                                "如果您想重新创建它, 请从 [@botfather](t.me/botfather) 获取新的机器人令牌. \n"
+                                "如果您想恢复它, 请联系系统管理员. \n"
+                            )
+                            return await info(msg)
+                        else:
+                            return await info("⚠️ 该机器人已经是匿名群组. ")
+                    msg = await info("ℹ️ 请稍等, 群组正在启动...")
+                    try:
+                        groupbot = await start_group_bot(token, creator=user)
+                    except asyncio.TimeoutError:
+                        await msg.delete()
+                        return await info("⚠️ 启动群组机器人超时, 请稍后重试. ")
+                    except RPCError as e:
+                        await msg.delete()
+                        return await info(f"⚠️ 启动群组机器人失败: \n{e.MESSAGE.format(value=e.value)}. ")
+                    else:
+                        await msg.delete()
+                        return await info(
+                            f"✅ 成功. 现在您可以访问匿名群组 [@{groupbot.group.username}](t.me/{groupbot.group.username}) 了. "
+                        )
+        finally:
+            self.set_conversation(conv.context, None)
 
         message.continue_propagation()

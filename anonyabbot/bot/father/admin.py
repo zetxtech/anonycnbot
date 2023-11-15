@@ -7,10 +7,9 @@ from peewee import fn
 
 import anonyabbot
 
-from ...utils import to_iterable, truncate_str, batch
+from ...utils import to_iterable, truncate_str
 from ...model import User, UserRole, Group, Member, Message
-from ..pool import stop_group_bot
-from ..group.worker import start_time, waiting_time, waiting_requests
+from ..pool import start_time, worker_status, stop_group_bot
 from .common import operation
 
 
@@ -27,21 +26,21 @@ class Admin:
         date_ago = datetime.now() - timedelta(days=7)
         n_active_groups = Group.select().where(~(Group.disabled), Group.last_activity >= date_ago).count()
         latest_user: User = User.select().order_by(User.created.desc()).get()
-        running_time = ":".join(str(datetime.now() - start_time).split(":")[:2])
-        waiting_delay = f"{waiting_time / waiting_requests:.1f}" if waiting_requests else "inf"
-        msg = f"ℹ️ System info:\n\n"
+        running_time = ":".join(str(datetime.now() - start_time).split(":")[:3]).split('.')[0]
+        waiting_delay = f"{worker_status['time'] / worker_status['requests']:.1f} 秒" if worker_status['requests'] else "无数据"
+        msg = f"ℹ️ 系统信息:\n\n"
         fields = [
-            f"Users: {User.select().count()}",
-            f"Groupers: {User.n_in_role(UserRole.GROUPER)}",
-            f"Awarded Users: {User.n_in_role(UserRole.AWARDED)}",
-            f"Paying Users: {User.n_in_role(UserRole.PAYING)}",
-            f"Admins: {User.n_in_role(UserRole.ADMIN)}",
-            f"Latest User: {latest_user.markdown}",
-            f"Groups: {n_groups}",
-            f"Active Groups: {n_active_groups}",
-            f"Running Time: {running_time}",
-            f"Average Delay: {waiting_delay}",
-            f"Messages: {Message.select().count()}",
+            f"用户数: {User.select().count()}",
+            f"群主数: {User.n_in_role(UserRole.GROUPER)}",
+            f"荣誉用户数: {User.n_in_role(UserRole.AWARDED)}",
+            f"付费用户数: {User.n_in_role(UserRole.PAYING)}",
+            f"管理员数: {User.n_in_role(UserRole.ADMIN)}",
+            f"最新用户: {latest_user.markdown}",
+            f"群组数: {n_groups}",
+            f"活跃群组数: {n_active_groups}",
+            f"运行时间: {running_time}",
+            f"平均传播延迟: {waiting_delay}",
+            f"消息数: {Message.select().count()}",
         ]
         msg += indent("\n".join(fields), "  ")
         return msg
@@ -94,7 +93,7 @@ class Admin:
         days = int(parameters["generate_codes_select_num_id"])
         num = int(parameters["generate_codes_id"])
         user: User = context.from_user.get_record()
-        msg = "⭐ Generated Codes:\n\n"
+        msg = "⭐ 生成的身份码:\n\n"
         for c in to_iterable(user.create_code(roles, days=days, num=num)):
             msg += f"`{c}`\n"
         return msg
@@ -129,7 +128,7 @@ class Admin:
             item = f"{i+1} | {name}"
             items.append((item, str(i + 1), g.id))
         if not items:
-            await self.info("⚠️ No group available.", context=context)
+            await self.info("⚠️ 当前没有群组.", context=context)
             await self.to_menu("admin", context)
         return items
 
@@ -143,9 +142,9 @@ class Admin:
     ):
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "activity":
-            return "🔽 Sort Activity" if desc else "🔼 Sort Activity"
+            return "🔽 最近活跃" if desc else "🔼 最近活跃"
         else:
-            return "↔ Sort Activity"
+            return "↔ 最近活跃"
 
     @operation(UserRole.ADMIN)
     async def on_lga_switch_activity(
@@ -158,10 +157,10 @@ class Admin:
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "activity":
             parameters["lga_sorting"] = ("activity", not desc)
-            await context.answer("🔽 Sort activity descending")
+            await context.answer("🔽 最旧到最新" if desc else "🔽 最新到最旧")
         else:
             parameters["lga_sorting"] = ("activity", True)
-            await context.answer("🔼 Sort activity ascending")
+            await context.answer("🔽 最新到最旧")
         await self.to_menu("list_group_all", context)
 
     @operation(UserRole.ADMIN)
@@ -174,9 +173,9 @@ class Admin:
     ):
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "members":
-            return "🔽 Sort Member Count" if desc else "🔼 Sort Member Count"
+            return "🔽 成员数" if desc else "🔼 成员数"
         else:
-            return "↔ Sort Member Count"
+            return "↔ 成员数"
 
     @operation(UserRole.ADMIN)
     async def on_lga_switch_member(
@@ -189,10 +188,10 @@ class Admin:
         sorting, desc = parameters.get("lga_sorting", ("members", True))
         if sorting == "members":
             parameters["lga_sorting"] = ("members", not desc)
-            await context.answer("🔽 Sort member descending")
+            await context.answer("🔽 成员数从少到多" if desc else "🔽 成员数从多到少")
         else:
             parameters["lga_sorting"] = ("members", True)
-            await context.answer("🔼 Sort member ascending")
+            await context.answer("🔽 成员数从多到少")
         await self.to_menu("list_group_all", context)
 
     @operation(UserRole.ADMIN)
@@ -215,15 +214,15 @@ class Admin:
         parameters: dict,
     ):
         group: Group = Group.get_by_id(parameters["group_id"])
-        msg = f"ℹ️ Group info:\n\n"
+        msg = f"ℹ️ 群组信息:\n\n"
         fields = [
-            f"Title: [{group.title}](t.me/{group.username})",
-            f"Creator: {group.creator.markdown}",
-            f"Members: {group.n_members}",
-            f"Messages: {group.n_messages}",
-            f"Disabled: {'**Yes**' if group.disabled else 'No'}",
-            f"Created: {group.created.strftime('%Y-%m-%d')}",
-            f"Last Activity: {group.last_activity.strftime('%Y-%m-%d')}",
+            f"标题: [{group.title}](t.me/{group.username})",
+            f"创建者: {group.creator.markdown}",
+            f"成员数: {group.n_members}",
+            f"消息数: {group.n_messages}",
+            f"禁用: {'**是**' if group.disabled else '否'}",
+            f"创建时间: {group.created.strftime('%Y-%m-%d')}",
+            f"最近活动时间: {group.last_activity.strftime('%Y-%m-%d')}",
         ]
         msg += indent("\n".join(fields), "  ")
         return msg
@@ -238,9 +237,9 @@ class Admin:
     ):
         group: Group = Group.get_by_id(parameters["group_id"])
         return (
-            f"⚠️ Are you sure to delete the group [@{group.username}](t.me/{group.username})?\n"
-            f"⚠️ This group has {group.n_members} members and {group.n_messages} messages.\n"
-            f'⚠️ This group was created at {group.created.strftime("%Y-%m-%d")}.'
+            f"⚠️ 确认删除群组 [@{group.username}](t.me/{group.username})?\n"
+            f"⚠️ 此群组有 {group.n_members} 位成员和 {group.n_messages} 条消息. \n"
+            f'⚠️ 此群组成立于 {group.created.strftime("%Y-%m-%d")}. '
         )
 
     @operation(UserRole.ADMIN)
@@ -254,5 +253,5 @@ class Admin:
         group: Group = Group.get_by_id(parameters["group_id"])
         group.disabled = True
         await stop_group_bot(group.token)
-        await context.answer("✅ Succeed")
+        await context.answer("✅ 成功")
         await self.to_menu("_group_detail_admin", context)

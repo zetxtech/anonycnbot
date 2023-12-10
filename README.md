@@ -1,23 +1,24 @@
-## Anonycnbot
+## Anonyabbot
 
-**Anonycnbot** 是一个用于创建完全匿名群组的机器人.  ([@anonycnbot](https://t.me/anonycnbot)).
+**Anonyabbot** is a bot for creating fully anonymous groups. ([@anonyabbot](https://t.me/anonyabbot)).
 
-[![Screenshot](https://github.com/anonycnbot/.github/raw/main/images/button.svg)](https://t.me/anonycnbot)
+[![Screenshot](https://github.com/anonyabbot/.github/raw/main/images/button.svg)](https://t.me/anonyabbot)
 
-### 特点
-1. 创建的匿名群组会以机器人的形式存在, 所有人的消息都将向所有成员广播. 
-2. 所有身份信息都会被隐藏, 包括姓名、用户名、头像、在线状态、输入状态等等, 用户之间会通过一个Emoji面具区分. 
-3. 内置了群管理工具, 比如封禁、欢迎消息、置顶消息等等. 
-4. 仅存储消息ID, 消息内容将不会被存储, 充分考虑隐私性. 
+### Features
+1. Anonymous groups are created as bots, where messages are broadcasted to all members.
+2. All identities are hidden, including name, username, avatar, online status, input status, etc.
+3. User will be identified with a mask (emoji or multiple emojis).
+4. Built-in management tools are included, such as banning, welcome message, pinned messages, etc.
+5. Message ids, rather than message content, are stored by the bot only.
 
-### 使用方法
-你需要前往 [@anonycnbot](https://t.me/anonycnbot), 然后按照机器人的指示操作. 简单来说, 包含以下步骤: 
-1. 在 [@anonycnbot](https://t.me/anonycnbot) 中点击“创建新群组”. 
-2. 在 [@botfather](https://t.me/botfather) 中创建一个新的机器人, 并将机器人的令牌转发给 [@anonycnbot](https://t.me/anonycnbot). 
-3. 此时新的机器人就成为了新的匿名群组, 试试看吧!
+### Usage
+Goto [@anonyabbot](https://t.me/anonyabbot), then follow the instructions in the bot. In brief:
+1. Click `New Group` in [@anonyabbot](https://t.me/anonyabbot).
+2. Create a new bot in [@botfather](https://t.me/botfather), and forward the token to [@anonyabbot](https://t.me/anonyabbot).
+3. Your masquerade is set.
 
-### 自部署
-新建一个 `config.toml`:
+### Deploy by yourself
+Create a `config.toml`:
 
 ```toml
 [tele]
@@ -28,7 +29,4 @@ api_hash = "abcde1234567890abcde1234567890"
 token = "12345678:AbCdEfG-123456789"
 ```
 
-您自行部署的版本应该在`/start`界面清晰标识此存储库为来源.  谢谢. 
-
-### 英文版 / English Version
-Please use [@anonyabbot](https://t.me/anonyabbot).
+Your self-deployed version SHOULD clearly identify this repository on `/start`. Thanks.

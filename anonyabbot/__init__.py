@@ -1,4 +1,3 @@
-__product__ = 'anonycnbot'
 __author__ = {
     "jackzzs": "jackzzs@outlook.com",
 }

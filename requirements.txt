@@ -13,3 +13,7 @@ python-dateutil
 emoji
 tgcrypto
 aenum
+redis
+watchdog
+fakeredis
+dill

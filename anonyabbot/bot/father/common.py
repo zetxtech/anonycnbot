@@ -32,12 +32,12 @@ def operation(req: UserRole = None, prohibited: UserRole = UserRole.BANNED, conv
             except ContinuePropagation:
                 raise
             except OperationError as e:
-                await self.info(f"⚠️ 失败: {e}. ", context, alert=True)
+                await self.info(f"⚠️ Fail: {e}.", context, alert=True)
             except Exception as e:
                 if isinstance(e, ContinuePropagation):
                     raise
                 logger.opt(exception=e).warning("Callback error:")
-                await self.info(f"⚠️ 发生错误.", context=context, alert=True)
+                await self.info(f"⚠️ Error occured.", context=context, alert=True)
                 return False
 
         return wrapper

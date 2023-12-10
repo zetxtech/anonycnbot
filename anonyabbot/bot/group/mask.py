@@ -1,10 +1,12 @@
 import asyncio
 from datetime import datetime, timedelta
 import random
+from typing import Dict, Tuple
 
 import emoji
 
 from ...model import Member
+from ...cache import CacheDict
 
 
 class MaskNotAvailable(Exception):
@@ -12,13 +14,35 @@ class MaskNotAvailable(Exception):
 
 
 class UniqueMask:
-    emojis = emoji.distinct_emoji_list("🐶🐱🐹🐰🦊🐼🐯🐮🦁🐸🐵🐔🐧🐥🦆🦅🦉🦄🐝🦋🐌🐙🦖🦀🐠🐳🐘🐿👻🎃🦕🐡🎄🍄🍁🐚🧸🎩🕶🐟🐬🦁🐲🪽🚤🛶")
+    emojis = emoji.distinct_emoji_list(
+        "🐶🐱🐹🐰🦊🐼🐯🐮🦁🐸🐵🐔🐧🐥🦆🦅🦉🦄🐝🦋🐌🐙🦖"
+        "🦀🐠🐳🐘🐿👻🎃🦕🐡🎄🍄🍁🐚🧸🎩🕶🐟🐬🦁🐲🚤🛶🦞"
+        "🦑🎄🐚👽🎃🧸♠️♣️♥️♦️🃏🔮🛸⛵️🎲🧊🍩🍪🍭🌶🍗🍖☘️🍄🤡"
+        "🧩🌀🏮🪄🏀⚽️🏈🎱🪁🍥🍦🧁🍓🫐🍇🍉🍋🍐🍎🍒🍑🥝🍆"
+        "🥑🥕🌽🥐🎷♟🏖🏔⚓️🛵🔯☮️☯️🆙🏴‍☠️⏳⛩🦧🌴🌷🌞🧶🐳🧿"
+    )
 
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    def __init__(self, token: str):
         self.lock = asyncio.Lock()
-        self.users = {}
-        self.masks = {}
+        self.token = token
+        self.users: Dict[int, str] = CacheDict(f'group.{self.token}.unique_mask.users')
+        self.masks: Dict[str, Tuple[int, datetime]] = CacheDict(f'group.{self.token}.unique_mask.masks')
+
+    def save(self):
+        self.users.save()
+        self.masks.save()
+
+    async def take_mask(self, member: Member, role: str):
+        async with self.lock:
+            if role in self.masks:
+                uid, t = self.masks[role]
+                if t > (datetime.now() + timedelta(days=3)):
+                    return False
+                else:
+                    del self.users[uid]
+            self.users[member.id] = role
+            self.masks[role] = (member.id, datetime.now())
+            return True   
 
     async def has_mask(self, member: Member):
         async with self.lock:
@@ -40,15 +64,18 @@ class UniqueMask:
                     self.users[member.id] = role
                     del self.masks[old_role]
                     self.masks[role] = (member.id, datetime.now())
+                    self.save()
                     return True, role
                 else:
                     role = self.users[member.id]
                     self.masks[role] = (member.id, datetime.now())
+                    self.save()
                     return False, role
             else:
                 role = self._get_mask()
                 self.users[member.id] = role
                 self.masks[role] = (member.id, datetime.now())
+                self.save()
                 return True, role
 
     def _get_mask(self):
@@ -59,7 +86,7 @@ class UniqueMask:
         for role, (uid, t) in self.masks.items():
             if t > (datetime.now() + timedelta(days=3)):
                 continue
-            if t < oldest_avail:
+            if (not oldest_avail) or (t < oldest_avail):
                 oldest_avail = role
         if oldest_avail:
             uid, _ = self.masks[oldest_avail]

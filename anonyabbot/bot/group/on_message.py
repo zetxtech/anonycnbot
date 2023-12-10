@@ -63,7 +63,7 @@ class OnMessage:
         context: TC,
         parameters: dict,
     ):
-        conv = self.conversion.get((context.message.chat.id, context.from_user.id), None)
+        conv = self.conversation.get((context.message.chat.id, context.from_user.id), None)
         if conv.status == "ci_confirm":
             event: asyncio.Event = conv.data
             event.set()
@@ -71,12 +71,12 @@ class OnMessage:
 
     @operation(req=None, conversation=True, allow_disabled=True)
     async def on_message(self: "anonyabbot.GroupBot", client: Client, message: TM):
-        info = async_partial(self.info, context=message)
+        info = async_partial(self.info, context=message, block=False)
         
         if message.text and message.text.startswith("/"):
             message.continue_propagation()
 
-        conv = self.conversion.get((message.chat.id, message.from_user.id), None)
+        conv = self.conversation.get((message.chat.id, message.from_user.id), None)
         if conv:
             try:
                 if conv.status == "ewmm_message":
@@ -87,7 +87,7 @@ class OnMessage:
                             content = message.text
                         self.group.welcome_message = content
                         self.group.save()
-                        await info(f"✅ 成功")
+                        await info(f"✅ Succeed.")
                     elif message.photo:
                         if message.caption == "disable":
                             content = None
@@ -96,13 +96,13 @@ class OnMessage:
                         self.group.welcome_message = content
                         self.group.welcome_message_photo = message.photo.file_id
                         self.group.save()
-                        await info(f"✅ 成功")
+                        await info(f"✅ Succeed.")
                     else:
-                        await info(f"⚠️ 不是有效的消息")
+                        await info(f"⚠️ Not a valid message.")
                 elif conv.status == "ewmm_button":
                     content = message.text or message.caption
                     if not content:
-                        await info(f"⚠️ 不是有效的消息")
+                        await info(f"⚠️ Not a valid message.")
                     else:
                         if content == "disable":
                             content = None
@@ -118,41 +118,49 @@ class OnMessage:
                                 "_ewmb_ok_confirm", message.chat.id, message.from_user.id, button_spec=message.text, text_message=tm.id
                             )
                         except ValueError:
-                            await info(f"⚠️ 格式错误")
+                            await info(f"⚠️ Format error.")
                 elif conv.status == "eci_instruction":
                     content = message.text or message.caption
                     if not content:
-                        await info(f"⚠️ 不是有效的消息")
+                        await info(f"⚠️ Not a valid message.")
                     else:
                         self.group.chat_instruction = message.text
                         self.group.save()
-                        await info(f"✅ 成功")
+                        await info(f"✅ Succeed.")
                 elif conv.status == "sm_mask":
                     content = message.text or message.caption
                     if not content:
-                        await info(f"⚠️ 不是有效的消息")
+                        await info(f"⚠️ Not a valid message.")
                     else:
                         member: Member = message.from_user.get_member(self.group)
                         if not member:
                             return
                         try:
                             member.check_ban(BanType.PIN_MASK)
-                            m = "".join(e["emoji"] for e in emoji.emoji_list(str(message.text)))
-                            if not m:
-                                raise OperationError("只有 emoji 可以作为面具")
-                            if len(m) > 1:
-                                member.check_ban(BanType.LONG_MASK_1)
-                            if len(m) >= 3:
-                                member.check_ban(BanType.LONG_MASK_2)
-                            if len(m) >= 3:
-                                member.check_ban(BanType.LONG_MASK_3)
+                            if (not member.check_ban(BanType.MASK_STR, fail=False)):
+                                m = str(message.text)
+                            else:
+                                m = "".join(e["emoji"] for e in emoji.emoji_list(str(message.text)))
+                                if not m:
+                                    raise OperationError("only emojis are acceptable as masks")
+                                if len(m) > 1:
+                                    member.check_ban(BanType.LONG_MASK_1)
+                                if len(m) > 2:
+                                    member.check_ban(BanType.LONG_MASK_2)
+                                if len(m) > 3:
+                                    member.check_ban(BanType.LONG_MASK_3)
+                            dup_member = Member.get_or_none(Member.group == self.group, Member.pinned_mask == m)
+                            if dup_member:
+                                raise OperationError("this mask has already been taken")
+                            if not await self.unique_mask_pool.take_mask(member, m):
+                                raise OperationError("this mask has already been taken")
                         except OperationError as e:
-                            await info(f"⚠️ 抱歉, {e}.")
+                            await info(f"⚠️ Sorry, {e}.")
                             await conv.data.delete()
                         else:
                             member.pinned_mask = m
                             member.save()
-                            await info(f"✅ 成功, 您将固定使用 {m} 作为面具.")
+                            await info(f"✅ Succeed, your mask is pinned as {m}.")
                             await conv.data.delete()
             finally:
                 await message.delete()
@@ -165,14 +173,13 @@ class OnMessage:
         try:
             member: Member = message.from_user.get_member(self.group)
             if not member:
-                raise OperationError("您不在该群组中, 请尝试使用 /start 加入.")
+                raise OperationError("you are not in this group, try /start to join")
             self.check_message(message, member)
         except OperationError as e:
-            await info(f"⚠️ 抱歉, {e}, 此消息将被删除.", time=30)
+            await info(f"⚠️ Sorry, {e}, and this message will be deleted soon.", time=30)
             await message.delete()
             return
-
-
+        
         if member.role == MemberRole.GUEST:
             if self.group.chat_instruction:
                 event = asyncio.Event()
@@ -194,7 +201,7 @@ class OnMessage:
             try:
                 created, mask = await self.unique_mask_pool.get_mask(member)
             except MaskNotAvailable:
-                await info(f"⚠️ 抱歉, 目前没有可用的面具, 此消息将被删除.", time=30)
+                await info(f"⚠️ Sorry, no mask is currently available, please set mask manually and try again. This message will be deleted soon.", time=30)
                 await message.delete()
                 return
 
@@ -214,25 +221,25 @@ class OnMessage:
         else:
             rmm = None
                 
-        m = Message.create(group=self.group, mid=message.id, member=member, mask=mask)
+        m = Message.create(group=self.group, mid=message.id, member=member, mask=mask, reply_to=rmm)
         member.last_mask = mask
         member.save()
 
         e = asyncio.Event()
-        op = BroadcastOperation(context=message, member=member, finished=e, message=m, reply_to=rmm)
+        op = BroadcastOperation(context=message, member=member, finished=e, message=m)
         
         if created:
-            msg: TM = await info(f"🔃 消息正在发送, 您的面具是 {mask} ...", time=None)
+            msg: TM = await info(f"🔃 Message sending as {mask} ...", time=None)
         else:
-            msg: TM = await info("🔃 消息正在发送 ...", time=None)
+            msg: TM = await info("🔃 Message sending ...", time=None)
         
         await self.queue.put(op)
         try:
             await asyncio.wait_for(e.wait(), 120)
         except asyncio.TimeoutError:
-            await msg.edit("⚠️ 发送消息超时.")
+            await msg.edit("⚠️ Timeout to broadcast message to all users.")
         else:
-            await msg.edit(f"✅ 消息已发送 ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit(f"✅ Message sent ({op.requests-op.errors}/{op.requests}).")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -240,7 +247,7 @@ class OnMessage:
     async def on_unknown(self: "anonyabbot.GroupBot", client: Client, message: TM):
         info = async_partial(self.info, context=message)
         await message.delete()
-        await info("⚠️ 未知命令")
+        await info("⚠️ Command unknown.")
 
     @operation(req=None, conversation=True, allow_disabled=True)
     async def on_edit_message(self: "anonyabbot.GroupBot", client: Client, message: TM):

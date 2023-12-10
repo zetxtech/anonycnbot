@@ -22,7 +22,7 @@ from pyrubrum import (
     PageStyle,
 )
 
-from .. import __name__ as __product__
+from .. import __product__
 
 from ..utils import to_iterable
 from ..config import config
@@ -166,7 +166,7 @@ class MenuBot(Bot):
         if button is None:
             func = getattr(self, f"button_{id.lstrip('_')}", None)
             if not func:
-                button = "✅ OK"
+                button = "✅ 确定"
             else:
                 button = func
         if display is None:
@@ -190,7 +190,7 @@ class MenuBot(Bot):
             "parse_mode": ParseMode.MARKDOWN if markdown else ParseMode.DISABLE,
         }
         style_params = {
-            "back_text": "◀️ Back",
+            "back_text": "◀️ 返回",
             "back_enable": False if back == False else True,
             "back_to": back,
         }

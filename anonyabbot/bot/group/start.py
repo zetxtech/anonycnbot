@@ -130,7 +130,7 @@ class Start:
                     "ℹ️ 该群组由 @anonycnbot 创建."
                     "🌈 群组状态：\n\n"
                     f"成员数：{self.group.n_members}\n"
-                    f"非游客成员数：{self.group._all_has_role(MemberRole.MEMBER).count()}\n\n"
+                    f"非游客成员数：{self.group.s_all_has_role(MemberRole.MEMBER).count()}\n\n"
                     "👤 您的成员信息：\n\n"
                     f"权限身份：{member.role.display.title()}\n"
                     f'面具：{mask if mask else "<未激活>"}\n\n'

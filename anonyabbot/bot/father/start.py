@@ -71,9 +71,9 @@ class Start:
         code = user.create_code(UserRole.INVITED, length = 8)
         days = config.get('father.invite_award_days', 180)
         return (
-            "🔗 Copy the invite link to your friends:\n\n"
+            "🔗 将以下链接复制给您的朋友:\n\n"
             f"`https://t.me/{self.bot.me.username}?start=_c_{code}`\n\n"
-            f"⭐ You will both get {days} days of PRIME when your friend creates his first anonymous group."
+            f"⭐ 在您的朋友创建首个匿名群组后, 你们都将获得 {days} 天的 PRIME 特权."
         )
 
     @operation()

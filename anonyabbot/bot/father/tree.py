@@ -23,7 +23,7 @@ class Tree:
                     "ℹ️ 创建的群组: ",
                     extras="new_group",
                 ): {M("jump_group_detail")},
-                L("feedback_group", "💬 Feedback", url="t.me/anonyabbot_chat_bot"): None,
+                L("feedback_group", "💬 反馈", url="t.me/anonycnbot_chat_bot"): None,
             },
             M("_group_detail", back="list_group"): {
                 M("edit_group_profile", "⚒️ 群组资料", "ℹ️ 群组头像和描述只能在 @botfather 中编辑"): {

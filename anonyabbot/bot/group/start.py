@@ -59,24 +59,24 @@ class Start:
                 e = asyncio.Event()
                 op = BulkRedirectOperation(messages=reversed(nrpm), member=member, finished=e)
                 info = async_partial(self.info, context=context)
-                msg: TM = await info(f"🔃 Loading pinned messages ...", time=None)
+                msg: TM = await info(f"🔃 加载置顶消息 ...", time=None)
                 await self.queue.put(op)
                 try:
                     await asyncio.wait_for(e.wait(), 120)
                 except asyncio.TimeoutError:
-                    await msg.edit("⚠️ Timeout to load pinned messages.")
+                    await msg.edit("⚠️ 加载置顶消息超时.")
                     await asyncio.sleep(3)
                 await msg.delete()
             
                 e = asyncio.Event()
                 op = BulkPinOperation(messages=reversed(list(member.pinned_messages())), member=member, finished=e)
                 info = async_partial(self.info, context=context)
-                msg: TM = await info(f"🔃 Pinning messages ...", time=None)
+                msg: TM = await info(f"🔃 设置置顶消息 ...", time=None)
                 await self.queue.put(op)
                 try:
                     await asyncio.wait_for(e.wait(), 120)
                 except asyncio.TimeoutError:
-                    await msg.edit("⚠️ Timeout to pin messages.")
+                    await msg.edit("⚠️ 设置置顶消息超时.")
                     await asyncio.sleep(3)
                 await msg.delete()
                 
@@ -85,12 +85,12 @@ class Start:
                 e = asyncio.Event()
                 op = BulkRedirectOperation(messages=reversed(nrm), member=member, finished=e)
                 info = async_partial(self.info, context=context)
-                msg: TM = await info(f"🔃 Loading latest messages ...", time=None)
+                msg: TM = await info(f"🔃 加载最新消息 ...", time=None)
                 await self.queue.put(op)
                 try:
                     await asyncio.wait_for(e.wait(), 120)
                 except asyncio.TimeoutError:
-                    await msg.edit("⚠️ Timeout to load latest messages.")
+                    await msg.edit("⚠️ 加载最新消息超时.")
                     await asyncio.sleep(3)
                 await msg.delete()
             

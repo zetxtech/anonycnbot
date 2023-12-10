@@ -109,7 +109,7 @@ class Worker:
                 if content:
                     content = f"{message.mask} | {content}"
                 else:
-                    content = f"{message.mask} has sent a media."
+                    content = f"{message.mask} 发送了媒体."
                 
                 rmr = None
                 if message.reply_to:

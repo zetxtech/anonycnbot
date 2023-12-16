@@ -127,7 +127,7 @@ class Start:
                 await welcome(self, user, member, context)
             else:
                 return (
-                    "ℹ️ 该群组由 @anonycnbot 创建."
+                    "ℹ️ 该群组由 @anonycnbot 创建.\n"
                     "🌈 群组状态：\n\n"
                     f"成员数：{self.group.n_members}\n"
                     f"非游客成员数：{self.group.s_all_has_role(MemberRole.MEMBER).count()}\n\n"

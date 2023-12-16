@@ -49,8 +49,12 @@ class OnCommand:
         msg: TM = await info(f"🔃 正在删除该消息...", time=None)
         n_members = self.group.n_members
         for i in range(5 * n_members):
-            if e.is_set():
-                await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} 成功).")
+            try:
+                await asyncio.wait_for(e.wait(), 1)
+            except asyncio.TimeoutError:
+                pass
+            else:
+                await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} successes).")
                 break
             if i % 10 == 0:
                 await msg.edit(f"🔃 正在删除该消息 ({op.requests}/{n_members}) ...")
@@ -180,7 +184,11 @@ class OnCommand:
         msg: TM = await info(f"🔃 正在置顶消息...", time=None)
         n_members = self.group.n_members
         for i in range(5 * n_members):
-            if e.is_set():
+            try:
+                await asyncio.wait_for(e.wait(), 1)
+            except asyncio.TimeoutError:
+                pass
+            else:
                 await msg.edit(f"📌 消息已置顶 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
             if i % 10 == 0:
@@ -207,7 +215,11 @@ class OnCommand:
         msg: TM = await info(f"🔃 正在取消置顶消息...", time=None)
         n_members = self.group.n_members
         for i in range(5 * n_members):
-            if e.is_set():
+            try:
+                await asyncio.wait_for(e.wait(), 1)
+            except asyncio.TimeoutError:
+                pass
+            else:
                 await msg.edit(f"📌 消息已取消置顶 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
             if i % 10 == 0:

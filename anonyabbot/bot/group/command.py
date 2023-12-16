@@ -47,12 +47,15 @@ class OnCommand:
         op = DeleteOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在删除该消息...", time=None)
-        try:
-            await asyncio.wait_for(e.wait(), 120)
-        except asyncio.TimeoutError:
-            await msg.edit("⚠️ 删除该消息超时")
+        n_members = self.group.n_members
+        for i in range(5 * n_members):
+            if e.is_set():
+                await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} 成功).")
+                break
+            if i % 10 == 0:
+                await msg.edit(f"🔃 正在删除该消息 ({op.requests}/{n_members}) ...")
         else:
-            await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests})")
+            await msg.edit("⚠️ 删除该消息超时")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -175,12 +178,15 @@ class OnCommand:
         op = PinOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在置顶消息...", time=None)
-        try:
-            await asyncio.wait_for(e.wait(), 120)
-        except asyncio.TimeoutError:
-            await msg.edit("⚠️ 置顶消息超时")
+        n_members = self.group.n_members
+        for i in range(5 * n_members):
+            if e.is_set():
+                await msg.edit(f"📌 消息已置顶 ({op.requests-op.errors}/{op.requests} 成功).")
+                break
+            if i % 10 == 0:
+                await msg.edit(f"🔃 正在置顶消息 ({op.requests}/{n_members}) ...")
         else:
-            await msg.edit(f"📌 消息已置顶 ({op.requests-op.errors}/{op.requests})")
+            await msg.edit("⚠️ 置顶消息超时")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -199,12 +205,15 @@ class OnCommand:
         op = UnpinOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在取消置顶消息...", time=None)
-        try:
-            await asyncio.wait_for(e.wait(), 120)
-        except asyncio.TimeoutError:
-            await msg.edit("⚠️ 取消置顶此消息超时")
+        n_members = self.group.n_members
+        for i in range(5 * n_members):
+            if e.is_set():
+                await msg.edit(f"📌 消息已取消置顶 ({op.requests-op.errors}/{op.requests} 成功).")
+                break
+            if i % 10 == 0:
+                await msg.edit(f"🔃 正在取消置顶消息 ({op.requests}/{n_members}) ...")
         else:
-            await msg.edit(f"📌 消息已取消置顶 ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit("⚠️ 取消置顶消息超时")
         await asyncio.sleep(2)
         await msg.delete()
 
@@ -234,7 +243,7 @@ class OnCommand:
         target: Member = mr.member
         return await self.to_menu_scratch("_member_detail", message.chat.id, message.from_user.id, member_id=target.id)
 
-    @operation(MemberRole.MEMBER, concurrency='inf')
+    @operation(MemberRole.MEMBER)
     async def pm(self, message: TM):
         info = async_partial(self.info, context=message)
 

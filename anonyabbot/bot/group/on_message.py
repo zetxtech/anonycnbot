@@ -69,7 +69,7 @@ class OnMessage:
             event.set()
         await context.message.delete()
 
-    @operation(req=None, conversation=True, allow_disabled=True, concurrency='inf')
+    @operation(req=None, conversation=True, allow_disabled=True)
     async def on_message(self: "anonyabbot.GroupBot", client: Client, message: TM):
         info = async_partial(self.info, context=message, block=False)
         
@@ -231,15 +231,18 @@ class OnMessage:
         if created:
             msg: TM = await info(f"🔃 消息正在发送, 您的面具是 {mask} ...", time=None)
         else:
-            msg: TM = await info("🔃 消息正在发送 ...", time=None)
+            msg: TM = await info("🔃 消息正在发送...", time=None)
         
         await self.queue.put(op)
-        try:
-            await asyncio.wait_for(e.wait(), 120)
-        except asyncio.TimeoutError:
-            await msg.edit("⚠️ 发送消息超时.")
+        n_members = self.group.n_members
+        for i in range(5 * n_members):
+            if e.is_set():
+                await msg.edit(f"✅ 消息已发送 ({op.requests-op.errors}/{op.requests} successes).")
+                break
+            if i % 10 == 0:
+                await msg.edit(f"🔃 消息正在发送 ({op.requests}/{n_members}) ...")
         else:
-            await msg.edit(f"✅ 消息已发送 ({op.requests-op.errors}/{op.requests}).")
+            await msg.edit("⚠️ 发送消息超时")
         await asyncio.sleep(2)
         await msg.delete()
 

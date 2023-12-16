@@ -392,10 +392,10 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ 无法编辑自己", show_alert=True)
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ 无法编辑权限高于您的成员", show_alert=True)
             await self.to_menu("_member_detail", context)
         target.role = role
         target.save()
@@ -488,10 +488,10 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ 无法编辑自己", show_alert=True)
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ 无法编辑权限高于您的成员", show_alert=True)
             await self.to_menu("_member_detail", context)
 
         current_selection = parameters.get("embg_current", [])
@@ -538,10 +538,10 @@ class Manage:
         if target.role >= MemberRole.ADMIN_ADMIN:
             member.validate(MemberRole.CREATOR, fail=True)
         if target.id == member.id:
-            await context.answer("⚠️ 无法编辑自己")
+            await context.answer("⚠️ 无法编辑自己", show_alert=True)
             await self.to_menu("_member_detail", context)
         if target.role >= member.role:
-            await context.answer("⚠️ 无法编辑权限高于您的成员")
+            await context.answer("⚠️ 无法编辑权限高于您的成员", show_alert=True)
             await self.to_menu("_member_detail", context)
         target.role = MemberRole.BANNED
         target.save()

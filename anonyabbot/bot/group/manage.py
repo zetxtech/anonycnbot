@@ -2,13 +2,13 @@ import asyncio
 from datetime import datetime
 from textwrap import indent
 from pyrogram import Client
-from pyrogram.types import Message as TM, CallbackQuery as TC
+from pyrogram.types import CallbackQuery as TC
 from pyrubrum import Element
 
 import anonyabbot
 
 from ...utils import truncate_str, parse_timedelta
-from ...model import Member, db, MemberRole, Group, BanType, BanGroup
+from ...model import Member, db, MemberRole, BanType, BanGroup
 from .common import operation
 
 

@@ -78,10 +78,11 @@ class OnCommand:
     async def on_setmask(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        user: User = message.from_user.get_record()
-        if not user.is_prime:
-            await info(f"⚠️ 您需要 [PRIME](t.me/anonycnbot?start=_createcode) 特权以使用该功能.")
-            return
+        member: Member = message.from_user.get_member(self.group)
+        if not member.validate(MemberRole.ADMIN):
+            if not member.user.is_prime:
+                await info(f"⚠️ 您需要 [PRIME](t.me/anonycnbot?start=_createcode) 特权以使用该功能.")
+                return
         msg: TM = await info("⬇️ 请输入 emoji 作为您的面具:", time=None)
         self.set_conversation(message, "sm_mask", data=msg)
         await asyncio.sleep(120)

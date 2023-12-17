@@ -16,7 +16,7 @@ class Tree:
                     M("create_code", "🔗 创建邀请链接"): None,
                     M("use_code", "🗝️ 兑换角色码"): None,
                 },
-                M("new_group", "💬 新建群组"): {L("botfather", "前往 @botfather", url="t.me/botfather")},
+                M("new_group", "➕ 新建群组"): {L("botfather", "前往 @botfather", url="t.me/botfather")},
                 P(
                     "list_group",
                     "⚒️ 我的群组",

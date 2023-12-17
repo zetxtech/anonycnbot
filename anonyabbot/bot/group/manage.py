@@ -116,6 +116,36 @@ class Manage:
         await context.answer("✅ 成功")
         await self.to_menu("_group_details", context)
 
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_edit_password(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        self.set_conversation(context, "ep_password")
+        if self.group.password:
+            msg = f"ℹ️ 当前设定的密码为 `{self.group.password}`\n\n"
+        else:
+            msg = f"ℹ️ 当前无需密码加入该群组.\n\n"
+        msg += (
+            "👁️‍🗨️ 这个面板仅对您可见\n"
+            "⬇️ 输入新的密码:\n"
+            "ℹ️ (输入 `disable` 以禁用密码保护)"
+        )
+        return msg
+    
+    @operation(MemberRole.ADMIN_MSG)
+    async def button_edit_password(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return "✅ Password" if self.group.password else "Set Password"
+
     @operation(MemberRole.ADMIN_MSG)
     async def on_edit_welcome_message(
         self: "anonyabbot.GroupBot",
@@ -179,7 +209,7 @@ class Manage:
         parameters: dict,
     ):
         status = parameters.get("show_latest_message", self.group.welcome_latest_messages)
-        return ("✅" if status else "") + " 入群推送最新消息"
+        return ("✅ " if status else "") + "入群推送最新消息"
     
     @operation(MemberRole.ADMIN_MSG)
     async def on_toggle_latest_message(
@@ -189,12 +219,12 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
-        status = not parameters.get("show_latest_message", True)
+        status = not parameters.get("show_latest_message", self.group.welcome_latest_messages)
         parameters["show_latest_message"] = status
         self.group.welcome_latest_messages = status
         self.group.save()
         await context.answer('✅ 成功')
-        await self.to_menu('edit_welcome_message', context)
+        await self.to_menu('group_entering', context)
 
     @operation(MemberRole.ADMIN_MSG)
     async def on_ewmb_ok(
@@ -359,7 +389,8 @@ class Manage:
             f"消息数：{target.n_messages}\n"
             f"最后活动时间：{target.last_activity.strftime('%Y-%m-%d')}\n"
             f"最后一次发信使用的面具：{target.last_mask}\n\n"
-            f"👁️‍🗨️ 此面板仅对您可见"
+            + (f"邀请人: {target.invitor.user.markdown}\n\n" if target.invitor else "")
+            + f"👁️‍🗨️ 这个面板仅对您可见"
         )
 
     @operation(MemberRole.ADMIN_BAN)
@@ -558,3 +589,97 @@ class Manage:
     ):
         await context.message.delete()
         await context.answer()
+    
+    @operation(MemberRole.ADMIN_MSG)
+    async def button_toggle_group_privacy_confirm(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        status = parameters.get("group_privacy", self.group.private)
+        return ("✅ " if status else "") + "非公开群组"
+    
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_toggle_group_privacy_confirm(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        status = not parameters.get("group_privacy", self.group.private)
+        if status:
+            return (
+                f"⚠️ 确认将群设置为非公开?\n"
+                f"⚠️ 如果确认，新成员需要通过邀请链接才能加入!\n"
+                f"⚠️ 您可以通过 /invite 生成邀请链接."
+            )
+        else:
+            return (
+                f"⚠️ 确认将群设置为公开?\n"
+                f"⚠️ 如果确认，新成员可以无需邀请链接直接加入!"
+            )
+    
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_toggle_group_privacy(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        status = not parameters.get("group_privacy", self.group.private)
+        parameters["group_privacy"] = status
+        self.group.private = status
+        self.group.save()
+        await context.answer('✅ 成功')
+        await self.to_menu('group_entering', context)
+    
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def button_edit_inactive_leave(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return "不活跃踢出 " + (f"({self.group.inactive_leave} 天)" if self.group.inactive_leave else "(禁用)")
+    
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_edit_inactive_leave(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return 'ℹ️ 成员不活跃多少天后将被降级并且无法接收消息?'
+    
+    @operation(MemberRole.ADMIN_BAN)
+    async def items_edit_inactive_leave(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return [Element(str(i), str(i)) for i in ["禁用", 1, 2, 3, 7, 30, 180]]
+    
+    @operation(MemberRole.ADMIN_ADMIN)
+    async def on_eil_done(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        r = parameters["eil_done_id"]
+        if r == "禁用":
+            self.group.inactive_leave = 0
+        else:
+            self.group.inactive_leave = int(r)
+        self.group.save()
+        await context.answer('✅ 成功')
+        await self.to_menu('group_other_settings', context)

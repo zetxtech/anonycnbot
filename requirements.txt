@@ -17,3 +17,6 @@ redis
 watchdog
 fakeredis
 dill
+librosa
+soundfile
+pydub

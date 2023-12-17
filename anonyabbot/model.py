@@ -91,6 +91,7 @@ class BanType(IntEnum):
     MASK_STR = 43, "设定非 emoji 面具"
     PM_USER = 50, "私聊其他用户"
     PM_ADMIN = 51, "私聊管理员"
+    INVITE = 60, "邀请新成员加入"
 
 
 class EnumField(IntegerField):
@@ -336,7 +337,7 @@ class BanGroup(BaseModel):
     created = DateTimeField(default=datetime.now)
     until = DateTimeField(default=datetime.now, null=True)
 
-    default_types = [BanType.MASK_STR]
+    default_types = [BanType.MASK_STR, BanType.INVITE]
 
     @classmethod
     def generate(cls, types: List[BanType] = None, until: datetime = None):
@@ -370,11 +371,22 @@ class Group(BaseModel):
     welcome_message_buttons = TextField(null=True, default=None)
     welcome_latest_messages = BooleanField(default=True)
     chat_instruction = TextField(null=True, default=None)
+    parent = ForeignKeyField('self', backref="subgroups", null=True, default=None)
+    password = TextField(null=True, default=None)
+    inactive_leave = IntegerField(default=0)
+    private = BooleanField(default=False)
     disabled = BooleanField(default=False)
 
     @property
     def n_members(self):
         return self.members.where(Member.role >= MemberRole.GUEST).count()
+    
+    @property
+    def n_members_all(self):
+        if self.parent:
+            return self.parent.n_members_all
+        else:
+            return self.members.where(Member.role >= MemberRole.GUEST).count()
     
     @classmethod
     def get_avg_n_members(cls):
@@ -455,7 +467,9 @@ class Member(BaseModel):
     last_activity = DateTimeField(default=datetime.now)
     last_mask = CharField(null=True, default=None)
     pinned_mask = CharField(null=True, default=None)
+    invitor = ForeignKeyField('self', backref="invitees", null=True, default=None)
     ban_group = ForeignKeyField(BanGroup, backref="linked_members", null=True)
+    
 
     @property
     def is_banned(self):
@@ -474,6 +488,10 @@ class Member(BaseModel):
             current_role = MemberRole.ADMIN_ADMIN
         else:
             current_role = self.role
+        if self.group.inactive_leave:
+            if self.last_activity < datetime.now() - timedelta(days=self.group.inactive_leave):
+                if current_role < MemberRole.ADMIN:
+                    current_role = MemberRole.LEFT
         if not reversed:
             if current_role >= role:
                 return True

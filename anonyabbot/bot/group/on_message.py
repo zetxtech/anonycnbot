@@ -64,7 +64,7 @@ class OnMessage:
         parameters: dict,
     ):
         conv = self.conversation.get((context.message.chat.id, context.from_user.id), None)
-        if conv.status == "ci_confirm":
+        if conv and conv.status == "ci_confirm":
             event: asyncio.Event = conv.data
             event.set()
         await context.message.delete()
@@ -72,6 +72,7 @@ class OnMessage:
     @operation(req=None, conversation=True, allow_disabled=True)
     async def on_message(self: "anonyabbot.GroupBot", client: Client, message: TM):
         info = async_partial(self.info, context=message, block=False)
+        binfo = async_partial(self.info, context=message)
         
         if message.text and message.text.startswith("/"):
             message.continue_propagation()
@@ -115,7 +116,7 @@ class OnMessage:
                                 photo=self.group.welcome_message_photo,
                             )
                             await self.to_menu_scratch(
-                                "_ewmb_ok_confirm", message.chat.id, message.from_user.id, button_spec=message.text, text_message=tm.id
+                                "_ewmb_ok_confirm", message.chat.id, message.from_user.id, button_spec=content, text_message=tm.id
                             )
                         except ValueError:
                             await info(f"⚠️ 格式错误")
@@ -124,9 +125,34 @@ class OnMessage:
                     if not content:
                         await info(f"⚠️ 不是有效的消息")
                     else:
-                        self.group.chat_instruction = message.text
+                        if content == "disable":
+                            content = None
+                        self.group.chat_instruction = content
                         self.group.save()
                         await info(f"✅ 成功")
+                elif conv.status == "ep_password":
+                    content = message.text or message.caption
+                    if not content:
+                        await info(f"⚠️ 不是有效的消息")
+                    else:
+                        if content == "disable":
+                            content = None
+                        self.group.password = content
+                        self.group.save()
+                        await info(f"✅ 成功")
+                elif conv.status == "gp_password":
+                    event, container = conv.data
+                    try:
+                        content = message.text or message.caption
+                        if not content:
+                            await info(f"⚠️ 不是有效的消息")
+                        else:
+                            if content.strip().lower() == self.group.password.strip().lower():
+                                container[0] = True
+                            else:
+                                container[0] = False
+                    finally:
+                        event.set()
                 elif conv.status == "sm_mask":
                     content = message.text or message.caption
                     if not content:
@@ -176,9 +202,13 @@ class OnMessage:
                 raise OperationError("您不在该群组中, 请尝试使用 /start 加入.")
             self.check_message(message, member)
         except OperationError as e:
-            await info(f"⚠️ 抱歉, {e}, 此消息将被删除.", time=30)
+            await binfo(f"⚠️ 抱歉, {e}, 此消息将被删除.", time=30)
             await message.delete()
             return
+
+        if message.voice:
+            if (not self.group.is_prime) and (not member.user.is_prime):
+                await info(f"⚠️ 您或该群组创建者没有 [PRIME](t.me/anonycnbot?start=_createcode) 特权, 因此您发送的语音信息将不会被变声处理.")
         
         if member.role == MemberRole.GUEST:
             if self.group.chat_instruction:
@@ -201,7 +231,7 @@ class OnMessage:
             try:
                 created, mask = await self.unique_mask_pool.get_mask(member)
             except MaskNotAvailable:
-                await info(f"⚠️ 抱歉, 目前没有可用的面具, 请尝试手动设置面具, 此消息将被删除.", time=30)
+                await binfo(f"⚠️ 抱歉, 目前没有可用的面具, 请尝试手动设置面具, 此消息将被删除.", time=30)
                 await message.delete()
                 return
 
@@ -235,7 +265,7 @@ class OnMessage:
         
         await self.queue.put(op)
         n_members = self.group.n_members
-        for i in range(5 * n_members):
+        for i in range(30 + 5 * n_members):
             try:
                 await asyncio.wait_for(e.wait(), 1)
             except asyncio.TimeoutError:

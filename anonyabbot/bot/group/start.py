@@ -4,8 +4,8 @@ from pyrogram.types import Message as TM, CallbackQuery as TC, InlineKeyboardBut
 
 import anonyabbot
 
-from ...model import Member, User, MemberRole
-from ...utils import async_partial
+from ...model import BanType, Member, User, MemberRole
+from ...utils import async_partial, remove_prefix
 from .worker import BulkRedirectOperation, BulkPinOperation
 from .common import operation
 
@@ -103,7 +103,7 @@ class Start:
         context: TM,
         parameters: dict,
     ):
-        async def welcome(self, user, member, context):
+        async def welcome(self: "anonyabbot.GroupBot", user: User, member: Member, context: TM):
             await self.send_welcome_msg(
                 user=user,
                 msg=self.group.welcome_message,
@@ -115,6 +115,63 @@ class Start:
                 context=context,
             )
         
+        async def check(self: "anonyabbot.GroupBot", member: Member, context: TM):
+            info = async_partial(self.info, context=context)
+            if self.group.private:
+                content = context.text or context.caption
+                cmds = content.split()
+                if len(cmds) == 2:
+                    if cmds[1].startswith("_c_"):
+                        code = remove_prefix(cmds[1], "_c_")
+                        try:
+                            invitor: Member
+                            invitor, usage = self.invite_codes.get(code)
+                        except KeyError:
+                            await info('🚫 这个邀请链接已失效')
+                            return False
+                        else:
+                            if usage <= 0:
+                                await info('🚫 这个邀请链接已失效')
+                                return False
+                            if invitor.check_ban(BanType.INVITE):
+                                await info('🚫 这个邀请链接已失效')
+                                return False
+                            member.invitor = invitor
+                            usage -= 1
+                            self.invite_codes.set(code, (invitor, usage), ttl=-1)
+                            return True
+                    else:
+                        await info('🚫 这是一个私有群组，只能通过邀请链接加入')
+                        return False
+                else:
+                    await info('🚫 这是一个私有群组，只能通过邀请链接加入')
+                    return False
+            elif self.group.password:
+                event = asyncio.Event()
+                container = [False]
+                self.set_conversation(context, "gp_password", (event, container))
+                imsg = await self.bot.send_message(context.from_user.id, 'ℹ️ 输入群组密码以加入：')
+                try:
+                    await asyncio.wait_for(event.wait(), timeout=120)
+                except asyncio.TimeoutError:
+                    await info('🚫 超时')
+                    return False
+                else:
+                    if container[0]:
+                        await info('✅ 密码正确')
+                        return True
+                    else:
+                        await info('🚫 密码错误的')
+                        return False
+                finally:
+                    await imsg.delete()
+                    await context.delete()
+            else:
+                return True
+        
+        content = context.text or context.caption       
+        if not content.startswith('/start'):
+            context.continue_propagation()
         member: Member = context.from_user.get_member(self.group)
         user: User = context.from_user.get_record()
         if member:
@@ -122,9 +179,10 @@ class Start:
                 await context.delete()
             mask = member.pinned_mask or await self.unique_mask_pool.mask_for(member)
             if member.role == MemberRole.LEFT:
-                member.role = MemberRole.GUEST
-                member.save()
-                await welcome(self, user, member, context)
+                if await check(self, member, context):
+                    member.role = MemberRole.GUEST
+                    member.save()
+                    await welcome(self, user, member, context)
             else:
                 return (
                     "ℹ️ 该群组由 @anonycnbot 创建.\n"
@@ -137,8 +195,9 @@ class Start:
                     f"👁️‍🗨️ 此面板仅对您可见. "
                 )
         else:
-            member = Member.create(group=self.group, user=user, role=MemberRole.GUEST)
-            await welcome(self, user, member, context)
+            if await check(self, member, context):
+                member = Member.create(group=self.group, user=user, role=MemberRole.GUEST)
+                await welcome(self, user, member, context)
 
     @operation()
     async def on_leave_group_confirm(

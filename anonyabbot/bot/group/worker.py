@@ -2,16 +2,24 @@ import asyncio
 import copy
 from dataclasses import dataclass, field
 from datetime import datetime
+from io import BytesIO
+from pathlib import Path
+import random
 from typing import List
 
-from pyrogram.types import Message as TM
+import librosa
+import soundfile as sf
+from pydub import AudioSegment
+from pyrogram.types import Message as TM, MessageEntity
 from pyrogram.errors import RPCError, UserIsBlocked, UserDeactivated
+from pyrogram.enums import ParseMode
 
 import anonyabbot
 
 from ...cache import CacheQueue
 from ...model import MemberRole, Message, Member, BanType, RedirectedMessage
 from .. import pool
+from . import rosautils as _r
 
 @dataclass(kw_only=True)
 class Operation:
@@ -195,9 +203,37 @@ class Worker:
                     content = op.context.text or op.context.caption
 
                     if content:
-                        content = f"{op.message.mask} | {content}"
+                        prefix = f"{op.message.mask} | "
+                        content = f"{prefix}{content}"
+                        offset = len(prefix) + 1
                     else:
                         content = f"{op.message.mask} 发送了媒体."
+                        offset = len(content) + 1
+                    
+                    if op.context.voice:
+                        if self.group.is_prime or op.member.user.is_prime:
+                            f_ogg = await self.bot.download_media(op.context, in_memory=True)
+                            f_ogg.seek(0)
+                            a_ogg = AudioSegment.from_ogg(f_ogg)
+                            f_wav = BytesIO()
+                            a_ogg.export(f_wav, format="wav")
+                            f_wav.seek(0)
+                            obj, sr = librosa.load(f_wav, sr=None)
+                            obj = _r.change_pitch(obj, sr, random.choice([-3, 3]))
+                            obj = _r.change_male(obj, sr, random.choice([600, 900]))
+                            f_wav_mod = BytesIO()
+                            sf.write(f_wav_mod, obj, sr, format='wav')
+                            f_wav_mod.seek(0)
+                            a_wav = AudioSegment.from_wav(f_wav_mod)
+                            duration = int(a_wav.duration_seconds)
+                            f_ogg_mod = BytesIO()
+                            a_wav.export(f_ogg_mod, format="ogg")
+                            f_ogg_mod.seek(0)
+                            f_ogg_mod.name = 'tmp.ogg'
+                            voice_file_id = None
+                        else:
+                            voice_file_id = op.context.voice.file_id
+                            duration = None
 
                     m: Member
                     for m in self.group.user_members():
@@ -215,16 +251,38 @@ class Worker:
                         try:
                             if op.context.text:
                                 op.context.text = content
+                                if op.context.entities:
+                                    e: MessageEntity
+                                    for e in op.context.entities:
+                                        e.offset += offset
                                 masked_message = await op.context.copy(
                                     m.user.uid,
-                                    reply_to_message_id=rmr.mid if rmr else None,
+                                    reply_to_message_id = rmr.mid if rmr else None,
                                 )
                             else:
-                                masked_message = await op.context.copy(
-                                    m.user.uid,
-                                    caption=content,
-                                    reply_to_message_id=rmr.mid if rmr else None,
-                                )
+                                op.context.caption = content
+                                if op.context.caption_entities:
+                                    e: MessageEntity
+                                    for e in op.context.caption_entities:
+                                        e.offset += offset
+                                if op.context.voice:
+                                    masked_message = await self.bot.send_voice(
+                                        m.user.uid,
+                                        voice = f_ogg_mod if not voice_file_id else voice_file_id,
+                                        duration = duration,
+                                        caption = op.context.caption,
+                                        parse_mode = ParseMode.DISABLED,
+                                        caption_entities = op.context.caption_entities,
+                                        reply_to_message_id = rmr.mid if rmr else None,
+                                        reply_markup = op.context.reply_markup,
+                                    )
+                                    if not voice_file_id:
+                                        voice_file_id = masked_message.voice.file_id
+                                else:
+                                    masked_message = await op.context.copy(
+                                        m.user.uid,
+                                        reply_to_message_id = rmr.mid if rmr else None,
+                                    )
                             if not masked_message:
                                 op.errors += 1
                                 continue

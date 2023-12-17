@@ -1,12 +1,15 @@
 import asyncio
+import random
+import string
 from pyrogram import Client
-from pyrogram.types import Message as TM
+from pyrogram.types import Message as TM, CallbackQuery as TC
 from pyrogram.errors import RPCError
+from pyrubrum import Element
 
 import anonyabbot
 
 from ...model import MemberRole, Member, OperationError, BanType, Message, PMBan, PMMessage, RedirectedMessage, User
-from ...utils import async_partial
+from ...utils import async_partial, parse_timedelta
 from .common import operation
 from .worker import DeleteOperation, PinOperation, UnpinOperation
 from .mask import MaskNotAvailable
@@ -41,14 +44,14 @@ class OnCommand:
         member, mr = self.get_member_reply_message(message)
         member.check_ban(BanType.MESSAGE)
         if not mr.member.id == member.id:
-            if not member.role >= MemberRole.ADMIN_BAN:
+            if not member.validate(MemberRole.ADMIN_BAN):
                 return await info(f"⚠️ 只能删除您发送的消息")
         e = asyncio.Event()
         op = DeleteOperation(member=member, finished=e, message=mr)
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在删除该消息...", time=None)
         n_members = self.group.n_members
-        for i in range(5 * n_members):
+        for i in range(30 + 5 * n_members):
             try:
                 await asyncio.wait_for(e.wait(), 1)
             except asyncio.TimeoutError:
@@ -77,7 +80,7 @@ class OnCommand:
         info = async_partial(self.info, context=message)
         user: User = message.from_user.get_record()
         if not user.is_prime:
-            await info(f"⚠️ 您需要 [PRIME](t.me/{self.bot.me.username}?start=_createcode) 特权以使用该功能.")
+            await info(f"⚠️ 您需要 [PRIME](t.me/anonycnbot?start=_createcode) 特权以使用该功能.")
             return
         msg: TM = await info("⬇️ 请输入 emoji 作为您的面具:", time=None)
         self.set_conversation(message, "sm_mask", data=msg)
@@ -173,7 +176,7 @@ class OnCommand:
         info = async_partial(self.info, context=message)
         user: User = message.from_user.get_record()
         if (not self.group.is_prime) and (not user.is_prime):
-            await info(f"⚠️ 该群组创建者没有 [PRIME](t.me/{self.bot.me.username}?start=_createcode) 特权, 因此不能使用该功能.")
+            await info(f"⚠️ 您或该群组创建者没有 [PRIME](t.me/anonycnbot?start=_createcode) 特权, 因此不能使用该功能.")
             return
         member, mr = self.get_member_reply_message(message)
         mr.pinned = True
@@ -183,7 +186,7 @@ class OnCommand:
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在置顶消息...", time=None)
         n_members = self.group.n_members
-        for i in range(5 * n_members):
+        for i in range(30 + 5 * n_members):
             try:
                 await asyncio.wait_for(e.wait(), 1)
             except asyncio.TimeoutError:
@@ -204,7 +207,7 @@ class OnCommand:
         info = async_partial(self.info, context=message)
         user: User = message.from_user.get_record()
         if (not self.group.is_prime) and (not user.is_prime):
-            await info(f"⚠️ 该群组创建者没有 [PRIME](t.me/{self.bot.me.username}?start=_createcode) 特权, 因此不能使用该功能.")
+            await info(f"⚠️ 该群组创建者没有 [PRIME](t.me/anonycnbot?start=_createcode) 特权, 因此不能使用该功能.")
             return
         member, mr = self.get_member_reply_message(message)
         mr.pinned = False
@@ -214,7 +217,7 @@ class OnCommand:
         await self.queue.put(op)
         msg: TM = await info(f"🔃 正在取消置顶消息...", time=None)
         n_members = self.group.n_members
-        for i in range(5 * n_members):
+        for i in range(30 + 5 * n_members):
             try:
                 await asyncio.wait_for(e.wait(), 1)
             except asyncio.TimeoutError:
@@ -244,7 +247,7 @@ class OnCommand:
             f"消息总数: {target.n_messages}\n"
             f"最近活跃: {target.last_activity.strftime('%Y-%m-%d')}\n"
             f"最近面具: {target.last_mask}\n\n"
-            f"👁️‍🗨️ 此面板仅对您可见"
+            f"👁️‍🗨️ 这个面板仅对您可见"
         )
         await info(msg, time=15)
 
@@ -257,7 +260,8 @@ class OnCommand:
 
     @operation(MemberRole.MEMBER)
     async def pm(self, message: TM):
-        info = async_partial(self.info, context=message)
+        info = async_partial(self.info, context=message, block=False)
+        binfo = async_partial(self.info, context=message)
 
         content = message.text or message.caption
         
@@ -279,7 +283,7 @@ class OnCommand:
                 raise OperationError('此用户不想接收来自您的私信')
             self.check_message(message, member)
         except OperationError as e:
-            await info(f"⚠️ 对不起, {e}, 此消息将被删除. ", time=30)
+            await binfo(f"⚠️ 对不起, {e}, 此消息将被删除. ", time=30)
             await message.delete()
             return
         
@@ -290,7 +294,7 @@ class OnCommand:
             try:
                 created, mask = await self.unique_mask_pool.get_mask(member)
             except MaskNotAvailable:
-                await info(f"⚠️ 对不起, 目前没有可用的面具, 请尝试手动设置面具, 此消息将被删除. ", time=30)
+                await binfo(f"⚠️ 对不起, 目前没有可用的面具, 请尝试手动设置面具, 此消息将被删除. ", time=30)
                 await message.delete()
                 return
         
@@ -335,3 +339,98 @@ class OnCommand:
         message.text = content
 
         await self.pm(message)
+        
+    @operation(MemberRole.MEMBER)
+    async def on_invite(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TM,
+        parameters: dict,
+    ):
+        await context.delete()
+        if not self.group.private:
+            raise OperationError('该群组是公开群组, 不需要邀请链接')
+        member: Member = context.from_user.get_member(self.group)
+        member.check_ban(BanType.INVITE, fail=True)
+        return '❓ 生成的邀请链接可以使用多少次?'
+    
+    @operation(None)
+    async def on_close_invite(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        await context.message.delete()
+    
+    @operation(MemberRole.MEMBER)
+    async def items_invite(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return [Element(str(i), str(i)) for i in [1, 2, 3, 5, "无限"]]
+    
+    @operation(MemberRole.MEMBER)
+    async def on_i_select_time(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return '❓ 生成的邀请链接有效期是多长?'
+    
+    @operation(MemberRole.MEMBER)
+    async def items_i_select_time(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        return [Element(i, i) for i in ["1m", "10m", "1h", "12h", "1d", "7d", "30d", "永久"]]
+    
+    @operation(MemberRole.MEMBER)
+    async def on_i_done(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        member: Member = context.from_user.get_member(self.group)
+        member.check_ban(BanType.INVITE, fail=True)
+        t = parameters["i_select_time_id"]
+        if t == "无限":
+            times = float("inf")
+        else:
+            times = int(t)
+        v = parameters["i_done_id"]
+        if v == "永久":
+            ttl = None
+        else:
+            td = parse_timedelta(v)
+            ttl = int(td.total_seconds())
+        digits = [s for s in string.digits if not s == "0"]
+        asciis = [s for s in string.ascii_uppercase if not s == "O"]
+        code = "".join(random.choices(digits + asciis, k=16))
+        self.invite_codes.set(code, (member, times), ttl=ttl)
+        return (
+            "🔗 将该邀请链接复制给您的朋友:\n\n"
+            f"`https://t.me/{self.bot.me.username}?start=_c_{code}`\n\n"
+        )
+    
+    @operation(None)
+    async def on_i_close(
+        self: "anonyabbot.GroupBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        await context.message.delete()

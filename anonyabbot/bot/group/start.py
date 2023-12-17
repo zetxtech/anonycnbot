@@ -170,7 +170,7 @@ class Start:
                 return True
         
         content = context.text or context.caption       
-        if not content.startswith('/start'):
+        if (not content) or (not content.startswith('/start')):
             context.continue_propagation()
         member: Member = context.from_user.get_member(self.group)
         user: User = context.from_user.get_record()

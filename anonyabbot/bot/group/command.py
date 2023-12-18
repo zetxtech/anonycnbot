@@ -59,7 +59,7 @@ class OnCommand:
             else:
                 await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
-            if i % 10 == 0:
+            if i % 40 == 0:
                 await msg.edit(f"🔃 正在删除该消息 ({op.requests}/{n_members}) ...")
         else:
             await msg.edit("⚠️ 删除该消息超时")
@@ -195,7 +195,7 @@ class OnCommand:
             else:
                 await msg.edit(f"📌 消息已置顶 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
-            if i % 10 == 0:
+            if i % 40 == 0:
                 await msg.edit(f"🔃 正在置顶消息 ({op.requests}/{n_members}) ...")
         else:
             await msg.edit("⚠️ 置顶消息超时")
@@ -225,7 +225,7 @@ class OnCommand:
             else:
                 await msg.edit(f"📌 消息已取消置顶 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
-            if i % 10 == 0:
+            if i % 40 == 0:
                 await msg.edit(f"🔃 正在取消置顶消息 ({op.requests}/{n_members}) ...")
         else:
             await msg.edit("⚠️ 取消置顶消息超时")

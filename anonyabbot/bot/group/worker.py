@@ -235,6 +235,19 @@ class Worker:
                             voice_file_id = op.context.voice.file_id
                             duration = None
 
+                    if op.context.text:   
+                        op.context.text = content
+                        if op.context.entities:
+                            e: MessageEntity
+                            for e in op.context.entities:
+                                e.offset += offset
+                    else:
+                        op.context.caption = content
+                        if op.context.caption_entities:
+                            e: MessageEntity
+                            for e in op.context.caption_entities:
+                                e.offset += offset
+
                     m: Member
                     for m in self.group.user_members():
                         if m.id == op.member.id:
@@ -250,21 +263,11 @@ class Worker:
 
                         try:
                             if op.context.text:
-                                op.context.text = content
-                                if op.context.entities:
-                                    e: MessageEntity
-                                    for e in op.context.entities:
-                                        e.offset += offset
                                 masked_message = await op.context.copy(
                                     m.user.uid,
                                     reply_to_message_id = rmr.mid if rmr else None,
                                 )
                             else:
-                                op.context.caption = content
-                                if op.context.caption_entities:
-                                    e: MessageEntity
-                                    for e in op.context.caption_entities:
-                                        e.offset += offset
                                 if op.context.voice:
                                     masked_message = await self.bot.send_voice(
                                         m.user.uid,

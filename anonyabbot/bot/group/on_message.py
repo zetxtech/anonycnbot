@@ -276,7 +276,7 @@ class OnMessage:
             else:
                 await msg.edit(f"✅ 消息已发送 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
-            if i % 10 == 0:
+            if i % 40 == 0:
                 await msg.edit(f"🔃 消息正在发送 ({op.requests}/{n_members}) ...")
         else:
             await msg.edit("⚠️ 发送消息超时")

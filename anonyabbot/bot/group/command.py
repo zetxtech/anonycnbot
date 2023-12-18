@@ -57,7 +57,7 @@ class OnCommand:
             except asyncio.TimeoutError:
                 pass
             else:
-                await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} successes).")
+                await msg.edit(f"🗑️ 消息已删除 ({op.requests-op.errors}/{op.requests} 成功).")
                 break
             if i % 10 == 0:
                 await msg.edit(f"🔃 正在删除该消息 ({op.requests}/{n_members}) ...")

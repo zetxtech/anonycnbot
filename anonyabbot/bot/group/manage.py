@@ -149,7 +149,7 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
-        return "✅ Password" if self.group.password else "Set Password"
+        return "✅ Password" if self.group.password else "设置入群密码"
 
     @operation(MemberRole.ADMIN_MSG)
     async def on_edit_welcome_message(

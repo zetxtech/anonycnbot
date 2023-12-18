@@ -1,4 +1,5 @@
 from pyrubrum import transform
+from pyrogram import filters
 
 import anonyabbot
 
@@ -12,7 +13,7 @@ class Tree:
         K = self._keyboard
         menu = {
             M("_chat_instruction"): {M("chat_instruction_confirm", "✅ 我已经仔细阅读并接受发言规则. ")},
-            M("start", default=True): {
+            M("start", filter=filters.command('start')): {
                 M("leave_group_confirm", "⏏️ 离开群组"): {M("leave_group", "⚠️ 是的, 我确定. ")},
                 M("manage_group", "⚒️ 管理群组"): None,
                 L("anonyabbot", "👤 新建群组", url="t.me/anonycnbot"): None,

@@ -1,6 +1,7 @@
 import asyncio
 from pyrogram import Client
 from pyrogram.types import Message as TM, CallbackQuery as TC, InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.errors import PeerIdInvalid
 
 import anonyabbot
 
@@ -47,10 +48,13 @@ class Start:
         else:
             markup = None
 
-        if photo:
-            return await self.bot.send_photo(user.uid, photo, caption=msg, reply_markup=markup)
-        else:
-            return await self.bot.send_message(user.uid, msg, reply_markup=markup)
+        try:
+            if photo:
+                return await self.bot.send_photo(user.uid, photo, caption=msg, reply_markup=markup)
+            else:
+                return await self.bot.send_message(user.uid, msg, reply_markup=markup)
+        except PeerIdInvalid:
+            pass
         
     async def send_latest_messages(self: "anonyabbot.GroupBot", member: Member, context: TM):
         if self.group.welcome_latest_messages:
@@ -169,9 +173,6 @@ class Start:
             else:
                 return True
         
-        content = context.text or context.caption       
-        if (not content) or (not content.startswith('/start')):
-            context.continue_propagation()
         member: Member = context.from_user.get_member(self.group)
         user: User = context.from_user.get_record()
         if member:

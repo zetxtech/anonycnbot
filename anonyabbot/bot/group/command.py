@@ -206,8 +206,7 @@ class OnCommand:
     async def on_unpin(self: "anonyabbot.GroupBot", client: Client, message: TM):
         await message.delete()
         info = async_partial(self.info, context=message)
-        user: User = message.from_user.get_record()
-        if (not self.group.is_prime) and (not user.is_prime):
+        if not self.group.is_prime:
             await info(f"⚠️ 该群组创建者没有 [PRIME](t.me/anonycnbot?start=_createcode) 特权, 因此不能使用该功能.")
             return
         member, mr = self.get_member_reply_message(message)

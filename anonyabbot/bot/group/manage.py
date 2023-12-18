@@ -7,7 +7,7 @@ from pyrubrum import Element
 
 import anonyabbot
 
-from ...utils import truncate_str, parse_timedelta
+from ...utils import async_partial, truncate_str, parse_timedelta
 from ...model import Member, db, MemberRole, BanType, BanGroup
 from .common import operation
 
@@ -124,6 +124,11 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
+        info = async_partial(self.info, context=context, alert=True)
+        if not self.group.is_prime:
+            await info(f"⚠️ This function is only available to groups created by prime users.")
+            await self.to_menu('group_entering', context)
+            return
         self.set_conversation(context, "ep_password")
         if self.group.password:
             msg = f"ℹ️ 当前设定的密码为 `{self.group.password}`\n\n"
@@ -609,6 +614,11 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
+        info = async_partial(self.info, context=context, alert=True)
+        if not self.group.is_prime:
+            await info(f"⚠️ This function is only available to groups created by prime users.")
+            await self.to_menu('group_entering', context)
+            return
         status = not parameters.get("group_privacy", self.group.private)
         if status:
             return (
@@ -655,6 +665,11 @@ class Manage:
         context: TC,
         parameters: dict,
     ):
+        info = async_partial(self.info, context=context, alert=True)
+        if not self.group.is_prime:
+            await info(f"⚠️ 该功能仅可用于 PRIME 用户创建的群组.")
+            await self.to_menu('group_other_settings', context)
+            return
         return 'ℹ️ 成员不活跃多少天后将被降级并且无法接收消息?'
     
     @operation(MemberRole.ADMIN_BAN)

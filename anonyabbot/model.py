@@ -484,10 +484,10 @@ class Member(BaseModel):
         self.save()
 
     def validate(self, role: MemberRole, fail=False, reversed=False):
+        current_role = self.role
         if self.user.validate(UserRole.CREATOR, fail=False):
-            current_role = MemberRole.ADMIN_ADMIN
-        else:
-            current_role = self.role
+            if current_role < MemberRole.ADMIN_ADMIN:
+                current_role = MemberRole.ADMIN_ADMIN
         if self.group.inactive_leave:
             if self.last_activity < datetime.now() - timedelta(days=self.group.inactive_leave):
                 if current_role < MemberRole.ADMIN:

@@ -3,10 +3,10 @@ import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 import random
 from typing import List
 
+import emoji
 import librosa
 import soundfile as sf
 from pydub import AudioSegment
@@ -205,10 +205,12 @@ class Worker:
                     if content:
                         prefix = f"{op.message.mask} | "
                         content = f"{prefix}{content}"
-                        offset = len(prefix) + 1
+                        offset = 0
+                        for c in prefix:
+                            offset += 1 if ord(c) < 65536 else 2
                     else:
                         content = f"{op.message.mask} 发送了媒体."
-                        offset = len(content) + 1
+                        offset = 0
                     
                     if op.context.voice:
                         if self.group.is_prime or op.member.user.is_prime:

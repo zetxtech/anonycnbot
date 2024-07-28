@@ -2,7 +2,7 @@
 
 **Anonycnbot** 是一个用于创建完全匿名群组的机器人.  ([@anonycnbot](https://t.me/anonycnbot)).
 
-[![Screenshot](https://github.com/zetxtech/.github/raw/main/images/button.svg)](https://t.me/anonycnbot)
+[![Screenshot](https://github.com/zetxtech/anonycnbot/raw/main/images/button.svg)](https://t.me/anonycnbot)
 
 ### 特点
 1. 创建的匿名群组会以机器人的形式存在, 所有人的消息都将向所有成员广播. 

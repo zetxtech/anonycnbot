@@ -4,7 +4,8 @@ from pyrogram.types import Message as TM, CallbackQuery as TC
 
 import anonyabbot
 
-from ...model import User, Group
+from ...model import User, Group, UserRole
+from ...config import config
 from ...utils import remove_prefix, truncate_str
 from ..pool import stop_group_bot
 from .common import operation
@@ -24,9 +25,14 @@ class Start:
                 return None
             cmds = context.text.split()
             if len(cmds) == 2:
+                if cmds[1] == "_createcode":
+                    return await self.to_menu("create_code", context)
                 if cmds[1] == "_usecode":
                     return await self.to_menu("use_code", context)
-                elif cmds[1].startswith("_g_"):
+                if cmds[1].startswith("_c_"):
+                    code = remove_prefix(cmds[1], "_c_")
+                    return await self.to_menu("use_code", context, code=code)
+                if cmds[1].startswith("_g_"):
                     gid = remove_prefix(cmds[1], "_g_")
                     return await self.to_menu("_group_detail", context, gid=gid)
         return f"🌈 欢迎 {context.from_user.name}!\n\n" "此机器人将帮助您创建一个全匿名群组. "
@@ -54,6 +60,23 @@ class Start:
         return msg
     
     @operation()
+    async def on_create_code(
+        self: "anonyabbot.FatherBot",
+        handler,
+        client: Client,
+        context: TC,
+        parameters: dict,
+    ):
+        user: User = context.from_user.get_record()
+        code = user.create_code(UserRole.INVITED, length = 8)
+        days = config.get('father.invite_award_days', 180)
+        return (
+            "🔗 将以下链接复制给您的朋友:\n\n"
+            f"`https://t.me/{self.bot.me.username}?start=_c_{code}`\n\n"
+            f"⭐ 在您的朋友创建首个匿名群组后, 你们都将获得 {days} 天的 PRIME 特权."
+        )
+
+    @operation()
     async def on_use_code(
         self: "anonyabbot.FatherBot",
         handler,
@@ -61,8 +84,28 @@ class Start:
         context: TC,
         parameters: dict,
     ):
-        self.set_conversation(context, "use_code")
-        return "❓ 输入角色码:"
+        if 'code' in parameters:
+            user: User = context.from_user.get_record()
+            used = user.use_code(parameters['code'])
+            if len(used) == 1 and used[0].role == UserRole.INVITED:
+                days = config.get('father.invite_award_days', 180)
+                msg = (
+                    f"🌈 欢迎 {context.from_user.name}!\n\n"
+                    "此机器人将帮助您创建一个全匿名群组.\n"
+                    f"您已被邀请并将在您创建首个匿名群组后, 获得 {days} 天 PRIME 特权.\n\n"
+                    "ℹ️ 使用 /start 以开始."
+                )
+            elif used:
+                msg = "ℹ️ 您已经获得了以下身份:\n"
+                for u in used:
+                    days = u.days if u.days else "permanent"
+                    msg += f" {u.role.display} ({days})\n"
+            else:
+                msg = "⚠️ 无效邀请链接."
+            return msg
+        else:
+            self.set_conversation(context, "use_code")
+            return "❓ 输入角色码:"
 
     @operation()
     async def on_new_group(

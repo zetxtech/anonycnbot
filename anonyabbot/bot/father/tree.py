@@ -13,15 +13,17 @@ class Tree:
         menu = {
             M("start", default=True): {
                 M("my_info", "ℹ️ 个人信息"): {
+                    M("create_code", "🔗 创建邀请链接"): None,
                     M("use_code", "🗝️ 兑换角色码"): None,
                 },
-                M("new_group", "💬 新建群组"): {L("botfather", "前往 @botfather", url="t.me/botfather")},
+                M("new_group", "➕ 新建群组"): {L("botfather", "前往 @botfather", url="t.me/botfather")},
                 P(
                     "list_group",
                     "⚒️ 我的群组",
                     "ℹ️ 创建的群组: ",
                     extras="new_group",
                 ): {M("jump_group_detail")},
+                L("feedback_group", "💬 反馈", url="t.me/anonycnbot_chat_bot"): None,
             },
             M("_group_detail", back="list_group"): {
                 M("edit_group_profile", "⚒️ 群组资料", "ℹ️ 群组头像和描述只能在 @botfather 中编辑"): {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
 from typing import Iterable, List, Type, Union
@@ -52,11 +52,11 @@ class UserRole(IntEnum):
     NONE = 0, "未知用户"
     BANNED = 10, "被封禁用户"
     GROUPER = 20, "群组创建者用户"
+    INVITED = 15, "受邀用户"
     AWARDED = 30, "荣誉用户"
     PAYING = 40, "付费用户"
     ADMIN = 90, "系统管理员"
     CREATOR = 100, "系统创建者"
-
 
 class MemberRole(IntEnum):
     _init_ = "value display"
@@ -88,8 +88,10 @@ class BanType(IntEnum):
     LONG_MASK_1 = 40, "设定超过 1 个 emoji 的面具"
     LONG_MASK_2 = 41, "设定超过 2 个 emoji 的面具"
     LONG_MASK_3 = 42, "设定超过 3 个 emoji 的面具"
+    MASK_STR = 43, "设定非 emoji 面具"
     PM_USER = 50, "私聊其他用户"
     PM_ADMIN = 51, "私聊管理员"
+    INVITE = 60, "邀请新成员加入"
 
 
 class EnumField(IntegerField):
@@ -147,13 +149,17 @@ class User(BaseModel):
     def is_banned(self):
         return self.validate(UserRole.BANNED)
 
+    @property
+    def is_prime(self):
+        return self.validate([UserRole.PAYING, UserRole.AWARDED, UserRole.ADMIN, UserRole.CREATOR])
+
     def roles(self):
         for r in UserRole:
             if self.validate(r):
                 yield r
 
     @classmethod
-    def _all_in_role(cls, roles: Iterable[UserRole]):
+    def s_all_in_role(cls, roles: Iterable[UserRole]):
         return (
             cls.select()
             .join(Validation)
@@ -162,15 +168,15 @@ class User(BaseModel):
 
     @classmethod
     def all_in_role(cls, roles: Iterable[UserRole]):
-        for u in cls._all_in_role(roles).iterator():
+        for u in cls.s_all_in_role(roles).iterator():
             yield u
 
     @classmethod
     def n_in_role(cls, roles: Iterable[UserRole]):
-        return cls._all_in_role(roles).count()
+        return cls.s_all_in_role(roles).count()
 
     def validate(self, roles: Iterable[UserRole], fail=False, reversed=False):
-        if self._validation_for(roles).count():
+        if self.s_validation_for(roles).count():
             result = not reversed
         else:
             result = reversed
@@ -179,7 +185,7 @@ class User(BaseModel):
             raise UserRoleError(roles, reversed=reversed)
         return result
 
-    def _validation_for(self, roles: Iterable[UserRole] = None):
+    def s_validation_for(self, roles: Iterable[UserRole] = None):
         if roles is not None:
             return self.validations.where(
                 Validation.role << to_iterable(roles), (Validation.until > datetime.now()) | (Validation.until.is_null())
@@ -195,18 +201,18 @@ class User(BaseModel):
     ):
         with db.atomic():
             for role in to_iterable(roles):
-                validation: Validation = self._validation_for(role).get_or_none()
+                validation: Validation = self.s_validation_for(role).get_or_none()
                 if not validation:
                     if days is None:
                         until = None
                     else:
-                        until = datetime.now() + datetime.timedelta(days=days)
+                        until = datetime.now() + timedelta(days=days)
                     validation = Validation(user=self, role=role, until=until)
                 else:
                     if days is None:
                         validation.until = None
                     else:
-                        validation.until += datetime.timedelta(days=days)
+                        validation.until += timedelta(days=days)
                 validation.save()
                 if from_request:
                     from_request.used = validation
@@ -216,7 +222,7 @@ class User(BaseModel):
         count = 0
         with db.atomic():
             v: Validation
-            for v in self._validation_for(roles).iterator():
+            for v in self.s_validation_for(roles).iterator():
                 v.until = datetime.now()
                 v.save()
                 count += 1
@@ -257,9 +263,15 @@ class User(BaseModel):
     def use_code(self, code: str) -> List[ValidationRequest]:
         used = []
         with db.atomic():
-            vcs = ValidationRequest.select().where(ValidationRequest.code == code, ~(ValidationRequest.used))
+            vcs = ValidationRequest.select().where(ValidationRequest.code == code)
             vc: ValidationRequest
             for vc in vcs.iterator():
+                if vc.used:
+                    continue
+                if (vc.role == UserRole.INVITED) and (vc.created_by == self):
+                    continue
+                if self.validate(vc.role, fail=False):
+                    continue
                 if vc.code == code and not vc.used:
                     self.add_validation(vc.role, days=vc.days, from_request=vc)
                     used.append(vc)
@@ -284,6 +296,14 @@ class User(BaseModel):
             else:
                 for mp in self.member_profiles.where(Member.role >= MemberRole.GUEST).join(Group).where(~(Group.disabled)).iterator():
                     yield mp.group
+    
+    @property
+    def invited_by(self):
+        v = self.validations.where(Validation.role == UserRole.INVITED).get_or_none()
+        if v:
+            vr = v.requests.get_or_none()
+            if vr:
+                return vr.created_by
 
 
 class Validation(BaseModel):
@@ -317,7 +337,7 @@ class BanGroup(BaseModel):
     created = DateTimeField(default=datetime.now)
     until = DateTimeField(default=datetime.now, null=True)
 
-    default_types = []
+    default_types = [BanType.MASK_STR, BanType.INVITE]
 
     @classmethod
     def generate(cls, types: List[BanType] = None, until: datetime = None):
@@ -349,27 +369,59 @@ class Group(BaseModel):
     welcome_message = TextField(null=True, default=None)
     welcome_message_photo = TextField(null=True, default=None)
     welcome_message_buttons = TextField(null=True, default=None)
+    welcome_latest_messages = BooleanField(default=True)
     chat_instruction = TextField(null=True, default=None)
+    parent = ForeignKeyField('self', backref="subgroups", null=True, default=None)
+    password = TextField(null=True, default=None)
+    inactive_leave = IntegerField(default=0)
+    private = BooleanField(default=False)
     disabled = BooleanField(default=False)
 
     @property
     def n_members(self):
         return self.members.where(Member.role >= MemberRole.GUEST).count()
+    
+    @property
+    def n_members_all(self):
+        if self.parent:
+            return self.parent.n_members_all
+        else:
+            return self.members.where(Member.role >= MemberRole.GUEST).count()
+    
+    @classmethod
+    def get_avg_n_members(cls):
+        query = (
+            Member
+            .select(Member.group, fn.COUNT(Member.id).alias('count'))
+            .where(Member.role >= MemberRole.GUEST)
+            .group_by(Member.group)
+        )
+
+        try:
+            average = sum(q.count for q in query) / len(query)
+        except ZeroDivisionError:
+            return 0
+        else:
+            return average
 
     @property
     def n_messages(self):
         return self.messages.count()
+    
+    @property
+    def is_prime(self):
+        return self.creator.is_prime
 
     def default_bans(self):
         e: BanType
         for e in self.default_ban_group.entries.iterator():
             yield e.type
 
-    def _all_has_role(self, role: MemberRole):
+    def s_all_has_role(self, role: MemberRole):
         return self.members.where(Member.role >= role, Member.role >= MemberRole.GUEST)
 
-    def all_has_role(self, roles: MemberRole):
-        for u in self._all_has_role(roles).iterator():
+    def all_has_role(self, role: MemberRole):
+        for u in self.s_all_has_role(role).iterator():
             yield u
 
     def user_members(self, users: List[User] = None):
@@ -415,7 +467,9 @@ class Member(BaseModel):
     last_activity = DateTimeField(default=datetime.now)
     last_mask = CharField(null=True, default=None)
     pinned_mask = CharField(null=True, default=None)
+    invitor = ForeignKeyField('self', backref="invitees", null=True, default=None)
     ban_group = ForeignKeyField(BanGroup, backref="linked_members", null=True)
+    
 
     @property
     def is_banned(self):
@@ -430,15 +484,23 @@ class Member(BaseModel):
         self.save()
 
     def validate(self, role: MemberRole, fail=False, reversed=False):
+        current_role = self.role
+        if self.user.validate(UserRole.CREATOR, fail=False):
+            if current_role < MemberRole.ADMIN_ADMIN:
+                current_role = MemberRole.ADMIN_ADMIN
+        if self.group.inactive_leave:
+            if self.last_activity < datetime.now() - timedelta(days=self.group.inactive_leave):
+                if current_role < MemberRole.ADMIN:
+                    current_role = MemberRole.LEFT
         if not reversed:
-            if self.role >= role:
+            if current_role >= role:
                 return True
             else:
                 if fail:
                     raise MemberRoleError(role, reversed=False)
                 return False
         else:
-            if self.role <= role:
+            if current_role <= role:
                 if fail:
                     raise MemberRoleError(role, reversed=True)
                 return False
@@ -461,7 +523,35 @@ class Member(BaseModel):
                     raise BanError(type=ban, member=False, until=self.group.default_ban_group.until)
                 return True
         return False
-
+            
+    def not_redirected_messages(self, limit: int = 10, days: int = 7):
+        results = []
+        for m in self.group.messages.order_by(Message.created.desc()).iterator():
+            if m.get_redirect_for(self) is None:
+                results.append(m)
+                if len(results) >= limit:
+                    break
+                if m.created < datetime.now() - timedelta(days=days):
+                    break
+            else:
+                break
+        return results
+    
+    def not_redirected_pinned_messages(self):
+        results = []
+        for m in self.group.messages.where(Message.pinned == True).order_by(Message.created.desc()).iterator():
+            if m.get_redirect_for(self) is None:
+                results.append(m)
+            else:
+                break
+        return results
+    
+    def s_pinned_messages(self):
+        return self.group.messages.where(Message.pinned == True).order_by(Message.created.desc())
+    
+    def pinned_messages(self):
+        for m in self.s_pinned_messages().iterator():
+            yield m
 
 class Message(BaseModel):
     id = AutoField()
@@ -469,6 +559,8 @@ class Message(BaseModel):
     mid = IntegerField(index=True)
     member = ForeignKeyField(Member, backref="messages")
     mask = CharField()
+    reply_to = ForeignKeyField('self', backref="replying_messages", null=True)
+    pinned = BooleanField(default=False)
     updated = DateTimeField(default=datetime.now)
     created = DateTimeField(default=datetime.now)
 

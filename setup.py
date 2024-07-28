@@ -25,7 +25,7 @@ setup(
     keywords=["telegram", "bot", "server"],
     name="anonycnbot",
     packages=find_packages(include=["anonyabbot", "anonyabbot.*"]),
-    url="https://github.com/anonycnbot/anonycnbot",
+    url="https://github.com/zetxtech/anonycnbot",
     version="1.0.0",
     zip_safe=False,
 )
